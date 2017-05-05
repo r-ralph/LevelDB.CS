@@ -1,0 +1,29 @@
+﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F9BA4AB4782DBD44AD9A8E5EB6D0EB63/@KeyIndexDefined">True</s:Boolean>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F9BA4AB4782DBD44AD9A8E5EB6D0EB63/Applicability/=Live/@EntryIndexedValue">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F9BA4AB4782DBD44AD9A8E5EB6D0EB63/Description/@EntryValue">Copyright template</s:String>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F9BA4AB4782DBD44AD9A8E5EB6D0EB63/Field/=year/@KeyIndexDefined">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F9BA4AB4782DBD44AD9A8E5EB6D0EB63/Field/=year/Expression/@EntryValue">getCurrentDate("yyyy")</s:String>
+	<s:Int64 x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F9BA4AB4782DBD44AD9A8E5EB6D0EB63/Field/=year/InitialRange/@EntryValue">-1</s:Int64>
+	<s:Int64 x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F9BA4AB4782DBD44AD9A8E5EB6D0EB63/Field/=year/Order/@EntryValue">0</s:Int64>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F9BA4AB4782DBD44AD9A8E5EB6D0EB63/Reformat/@EntryValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F9BA4AB4782DBD44AD9A8E5EB6D0EB63/Scope/=C3001E7C0DA78E4487072B7E050D86C5/@KeyIndexDefined">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F9BA4AB4782DBD44AD9A8E5EB6D0EB63/Scope/=C3001E7C0DA78E4487072B7E050D86C5/CustomProperties/=minimumLanguageVersion/@EntryIndexedValue">2.0</s:String>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F9BA4AB4782DBD44AD9A8E5EB6D0EB63/Scope/=C3001E7C0DA78E4487072B7E050D86C5/Type/@EntryValue">InCSharpFile</s:String>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F9BA4AB4782DBD44AD9A8E5EB6D0EB63/Shortcut/@EntryValue">copyright</s:String>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F9BA4AB4782DBD44AD9A8E5EB6D0EB63/ShortenQualifiedReferences/@EntryValue">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=F9BA4AB4782DBD44AD9A8E5EB6D0EB63/Text/@EntryValue">#region Copyright&#xD;
+// Copyright $year$ Ralph (Tamaki Hidetsugu)&#xD;
+//&#xD;
+// Licensed under the Apache License, Version 2.0 (the "License");&#xD;
+// you may not use this file except in compliance with the License.&#xD;
+// You may obtain a copy of the License at&#xD;
+//&#xD;
+//     http://www.apache.org/licenses/LICENSE-2.0&#xD;
+//&#xD;
+// Unless required by applicable law or agreed to in writing, software&#xD;
+// distributed under the License is distributed on an "AS IS" BASIS,&#xD;
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.&#xD;
+// See the License for the specific language governing permissions and&#xD;
+// limitations under the License.&#xD;
+#endregion</s:String></wpf:ResourceDictionary>
