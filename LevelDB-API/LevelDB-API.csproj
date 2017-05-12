@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>netstandard1.4</TargetFramework>
     <AssemblyName>LevelDB-API.Standard</AssemblyName>
@@ -13,5 +12,4 @@
     <RepositoryUrl>https://github.com/r-ralph/LevelDB.Standard</RepositoryUrl>
     <RepositoryType>Git</RepositoryType>
   </PropertyGroup>
-
 </Project>

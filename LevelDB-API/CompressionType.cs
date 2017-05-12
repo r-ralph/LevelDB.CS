@@ -37,7 +37,7 @@ namespace LevelDB
             }
         }
 
-        public int PersistentId { get; }
+        public byte PersistentId { get; }
 
         public static CompressionType GetCompressionTypeByPersistentId(int persistentId)
         {
@@ -51,7 +51,7 @@ namespace LevelDB
             throw new ArgumentException("Unknown persistent id :" + persistentId);
         }
 
-        public CompressionType(int persistentId)
+        public CompressionType(byte persistentId)
         {
             PersistentId = persistentId;
         }

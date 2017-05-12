@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>netstandard1.4</TargetFramework>
     <AssemblyName>LevelDB.Standard</AssemblyName>
@@ -12,9 +11,15 @@
     <RepositoryUrl>https://github.com/r-ralph/LevelDB.Standard</RepositoryUrl>
     <RepositoryType>Git</RepositoryType>
   </PropertyGroup>
-
   <ItemGroup>
+    <ProjectReference Include="..\Common\Crc32C.Sharp\Crc32C.Sharp.csproj">
+    </ProjectReference>
+    <ProjectReference Include="..\Common\Snappy.Sharp\Snappy.Sharp.csproj">
+    </ProjectReference>
     <ProjectReference Include="..\LevelDB-API\LevelDB-API.csproj" />
   </ItemGroup>
-
+  <ItemGroup>
+    <PackageReference Include="System.Collections.Immutable" Version="1.3.1">
+    </PackageReference>
+  </ItemGroup>
 </Project>
