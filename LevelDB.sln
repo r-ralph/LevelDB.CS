@@ -9,6 +9,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LevelDB-API", "LevelDB-API\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snappy.Sharp", "Common\Snappy.Sharp\Snappy.Sharp.csproj", "{693A9332-E1AA-4973-AFE2-D544AF91BDB5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Crc32C.Sharp", "Common\Crc32C.Sharp\Crc32C.Sharp.csproj", "{0E2D977A-597C-461B-A0D0-269323380A00}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Crc32C.Sharp.Test", "Common\Crc32C.Sharp.Test\Crc32C.Sharp.Test.csproj", "{55F6AC0A-2DE7-4ADA-BBE2-471BD948CCA6}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snappy.Sharp.Test", "Common\Snappy.Sharp.Test\Snappy.Sharp.Test.csproj", "{C3C15326-E12A-4F49-8D08-29DE9853EE6F}"
 EndProject
 Global
@@ -29,6 +33,14 @@ Global
 		{693A9332-E1AA-4973-AFE2-D544AF91BDB5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{693A9332-E1AA-4973-AFE2-D544AF91BDB5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{693A9332-E1AA-4973-AFE2-D544AF91BDB5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0E2D977A-597C-461B-A0D0-269323380A00}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0E2D977A-597C-461B-A0D0-269323380A00}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0E2D977A-597C-461B-A0D0-269323380A00}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0E2D977A-597C-461B-A0D0-269323380A00}.Release|Any CPU.Build.0 = Release|Any CPU
+		{55F6AC0A-2DE7-4ADA-BBE2-471BD948CCA6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{55F6AC0A-2DE7-4ADA-BBE2-471BD948CCA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{55F6AC0A-2DE7-4ADA-BBE2-471BD948CCA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{55F6AC0A-2DE7-4ADA-BBE2-471BD948CCA6}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C3C15326-E12A-4F49-8D08-29DE9853EE6F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C3C15326-E12A-4F49-8D08-29DE9853EE6F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C3C15326-E12A-4F49-8D08-29DE9853EE6F}.Release|Any CPU.ActiveCfg = Release|Any CPU
