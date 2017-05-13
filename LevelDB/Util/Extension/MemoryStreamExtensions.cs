@@ -24,7 +24,7 @@ namespace LevelDB.Util.Extension
     {
         public static void Clear(this MemoryStream stream)
         {
-            stream.SetLength(0);
+			stream.Position = 0;
         }
 
         public static long Remaining(this MemoryStream stream)

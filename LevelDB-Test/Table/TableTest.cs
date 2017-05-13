@@ -125,6 +125,7 @@ namespace LevelDB.Table
             }
             builder.Finish();
 
+			_fileChannel.Position = 0;
             var table = CreateTable(_file.FullName, _fileChannel, new BytewiseComparator(), true);
 
             ISeekingIterator<Slice, Slice> seekingIterator = table.GetTableIterator();

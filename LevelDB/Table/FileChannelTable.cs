@@ -18,6 +18,7 @@
 
 using System.Collections.Generic;
 using System.IO;
+using LevelDB.Guava;
 using LevelDB.Util;
 using LevelDB.Util.Extension;
 using Snappy.Sharp;
@@ -88,8 +89,10 @@ namespace LevelDB.Table
                     }
                     UncompressedScratch.Clear();
                     var decompress =
-                        new SnappyDecompressor().Decompress(uncompressedBuffer.ToArray(), 0, uncompressedLength);
+						new SnappyDecompressor().Decompress(uncompressedBuffer.ToArray(), 0, (int)uncompressedBuffer.Length);
                     UncompressedScratch.Write(decompress, 0, decompress.Length);
+					UncompressedScratch.Position = 0;
+                    UncompressedScratch.SetLength(decompress.Length);
                     uncompressedData = Slices.CopiedBuffer(UncompressedScratch);
                 }
             }
@@ -104,13 +107,17 @@ namespace LevelDB.Table
         private MemoryStream Read(long offset, int length)
         {
             var uncompressedBuffer = new MemoryStream(length);
-            FileChannel.Seek(offset, SeekOrigin.Begin);
-            FileChannel.CopyTo(uncompressedBuffer);
+			var prevPos = FileChannel.Position;
+			FileChannel.Position = offset;
+			var tmpArr = new byte[length];
+			FileChannel.Read(tmpArr, 0, length);
+			uncompressedBuffer.Write(tmpArr, 0, length);
             if (uncompressedBuffer.Remaining() >= 2)
             {
                 throw new IOException("Could not read all the data");
             }
-            uncompressedBuffer.Seek(0, SeekOrigin.Begin);
+			FileChannel.Position = prevPos;
+			uncompressedBuffer.Clear();
             return uncompressedBuffer;
         }
     }
