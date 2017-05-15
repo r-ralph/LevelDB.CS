@@ -162,7 +162,7 @@ namespace LevelDB.Table
 
         private void ReopenFile()
         {
-            _file = new FileInfo(Path.GetTempPath() + Guid.NewGuid() + ".csv");
+            _file = new FileInfo(Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".db"));
             if (_file.Exists)
             {
                 _file.Delete();
