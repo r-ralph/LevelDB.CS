@@ -31,6 +31,11 @@ namespace LevelDB.Table
 {
     public abstract class TableTest : IDisposable
     {
+        static TableTest()
+        {
+            LevelDBZlib.Init();
+        }
+
         private FileInfo _file;
         private FileStream _fileChannel;
 
@@ -57,20 +62,33 @@ namespace LevelDB.Table
         }
 
         [Fact]
-        public void TestEmptyBlock()
+        public void TestEmptyBlockSnappy()
         {
-            TestTable(int.MaxValue, int.MaxValue);
+            TestTable(int.MaxValue, int.MaxValue, CompressionType.Snappy);
         }
 
         [Fact]
-        public void TestSingleEntrySingleBlock()
+        public void TestEmptyBlockZlib()
         {
-            TestTable(int.MaxValue, int.MaxValue,
+            TestTable(int.MaxValue, int.MaxValue, LevelDBZlib.Zlib);
+        }
+
+        [Fact]
+        public void TestSingleEntrySingleBlockSnappy()
+        {
+            TestTable(int.MaxValue, int.MaxValue, CompressionType.Snappy,
                 BlockHelper.CreateBlockEntry("name", "dain sundstrom"));
         }
 
         [Fact]
-        public void TestMultipleEntriesWithSingleBlock()
+        public void TestSingleEntrySingleBlockZlib()
+        {
+            TestTable(int.MaxValue, int.MaxValue, LevelDBZlib.Zlib,
+                BlockHelper.CreateBlockEntry("name", "dain sundstrom"));
+        }
+
+        [Fact]
+        public void TestMultipleEntriesWithSingleBlockSnappy()
         {
             var entries = new[]
             {
@@ -84,12 +102,31 @@ namespace LevelDB.Table
 
             for (var i = 1; i < entries.Length; i++)
             {
-                TestTable(int.MaxValue, i, entries);
+                TestTable(int.MaxValue, i, CompressionType.Snappy, entries);
             }
         }
 
         [Fact]
-        public void TestMultipleEntriesWithMultipleBlock()
+        public void TestMultipleEntriesWithSingleBlockZlib()
+        {
+            var entries = new[]
+            {
+                BlockHelper.CreateBlockEntry("beer/ale", "Lagunitas  Little Sumpin’ Sumpin’"),
+                BlockHelper.CreateBlockEntry("beer/ipa", "Lagunitas IPA"),
+                BlockHelper.CreateBlockEntry("beer/stout", "Lagunitas Imperial Stout"),
+                BlockHelper.CreateBlockEntry("scotch/light", "Oban 14"),
+                BlockHelper.CreateBlockEntry("scotch/medium", "Highland Park"),
+                BlockHelper.CreateBlockEntry("scotch/strong", "Lagavulin")
+            };
+
+            for (var i = 1; i < entries.Length; i++)
+            {
+                TestTable(int.MaxValue, i, LevelDBZlib.Zlib, entries);
+            }
+        }
+
+        [Fact]
+        public void TestMultipleEntriesWithMultipleBlockSnappy()
         {
             var entries = new[]
             {
@@ -102,21 +139,47 @@ namespace LevelDB.Table
             };
 
             // one entry per block
-            TestTable(1, int.MaxValue, entries);
+            TestTable(1, int.MaxValue, CompressionType.Snappy, entries);
 
             // about 3 blocks
-            TestTable(BlockHelper.EstimateBlockSize(int.MaxValue, entries.ToList()) / 3, int.MaxValue, entries);
+            TestTable(BlockHelper.EstimateBlockSize(int.MaxValue, entries.ToList()) / 3, int.MaxValue,
+                CompressionType.Snappy, entries);
         }
 
-        private void TestTable(int blockSize, int blockRestartInterval, params BlockEntry[] entries)
+        [Fact]
+        public void TestMultipleEntriesWithMultipleBlockZlib()
         {
-            TestTable(blockSize, blockRestartInterval, entries.ToList());
+            var entries = new[]
+            {
+                BlockHelper.CreateBlockEntry("beer/ale", "Lagunitas  Little Sumpin’ Sumpin’"),
+                BlockHelper.CreateBlockEntry("beer/ipa", "Lagunitas IPA"),
+                BlockHelper.CreateBlockEntry("beer/stout", "Lagunitas Imperial Stout"),
+                BlockHelper.CreateBlockEntry("scotch/light", "Oban 14"),
+                BlockHelper.CreateBlockEntry("scotch/medium", "Highland Park"),
+                BlockHelper.CreateBlockEntry("scotch/strong", "Lagavulin")
+            };
+
+            // one entry per block
+            TestTable(1, int.MaxValue, LevelDBZlib.Zlib, entries);
+
+            // about 3 blocks
+            TestTable(BlockHelper.EstimateBlockSize(int.MaxValue, entries.ToList()) / 3, int.MaxValue,
+                CompressionType.Snappy, entries);
         }
 
-        private void TestTable(int blockSize, int blockRestartInterval, List<BlockEntry> entries)
+        private void TestTable(int blockSize, int blockRestartInterval, CompressionType compressionType,
+            params BlockEntry[] entries)
+        {
+            TestTable(blockSize, blockRestartInterval, compressionType, entries.ToList());
+        }
+
+        private void TestTable(int blockSize, int blockRestartInterval, CompressionType compressionType
+            , List<BlockEntry> entries)
         {
             ReopenFile();
-            var options = new Options().BlockSize(blockSize).BlockRestartInterval(blockRestartInterval);
+            var options = new Options().BlockSize(blockSize)
+                .BlockRestartInterval(blockRestartInterval)
+                .CompressionType(compressionType);
 
             var builder = new TableBuilder(options, _fileChannel, new BytewiseComparator());
             foreach (var entry in entries)
@@ -125,7 +188,7 @@ namespace LevelDB.Table
             }
             builder.Finish();
 
-			_fileChannel.Position = 0;
+            _fileChannel.Position = 0;
             var table = CreateTable(_file.FullName, _fileChannel, new BytewiseComparator(), true);
 
             ISeekingIterator<Slice, Slice> seekingIterator = table.GetTableIterator();

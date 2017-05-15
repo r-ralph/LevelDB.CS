@@ -11,6 +11,8 @@
   <ItemGroup>
     <ProjectReference Include="..\LevelDB-API\LevelDB-API.csproj">
     </ProjectReference>
+    <ProjectReference Include="..\LevelDB-Zlib\LevelDB-Zlib.csproj">
+    </ProjectReference>
     <ProjectReference Include="..\LevelDB\LevelDB.csproj">
     </ProjectReference>
   </ItemGroup>
