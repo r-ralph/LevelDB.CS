@@ -18,10 +18,8 @@
 
 using System.Collections.Generic;
 using System.IO;
-using LevelDB.Guava;
 using LevelDB.Util;
 using LevelDB.Util.Extension;
-using Snappy.Sharp;
 
 namespace LevelDB.Table
 {
@@ -60,45 +58,18 @@ namespace LevelDB.Table
             // }
 
             // decompress data
-            var uncompressedBuffer = Read(blockHandle.GetOffset(), blockHandle.GetDataSize());
+            var compressedStream = Read(blockHandle.GetOffset(), blockHandle.GetDataSize());
             Slice uncompressedData;
-            /*
-            if (blockTrailer.getCompressionType() == ZLIB)
+            lock (SyncLock)
             {
-                synchronized(FileChannelTable.class) {
-                    int uncompressedLength = uncompressedLength(uncompressedBuffer);
-                    if (uncompressedScratch.capacity() < uncompressedLength)
-                    {
-                        uncompressedScratch = ByteBuffer.allocateDirect(uncompressedLength);
-                    }
-                    uncompressedScratch.clear();
-
-                    Zlib.uncompress(uncompressedBuffer, uncompressedScratch);
-                    uncompressedData = Slices.copiedBuffer(uncompressedScratch);
-                }
-            }
-            else*/
-            if (blockTrailer.CompressionType == CompressionType.Snappy)
-            {
-                lock (SyncLock)
+                var uncompressedLength = UncompressedLength(compressedStream);
+                if (UncompressedScratch.Capacity < uncompressedLength)
                 {
-                    var uncompressedLength = UncompressedLength(uncompressedBuffer);
-                    if (UncompressedScratch.Capacity < uncompressedLength)
-                    {
-                        UncompressedScratch = new MemoryStream(uncompressedLength);
-                    }
-                    UncompressedScratch.Clear();
-                    var decompress =
-						new SnappyDecompressor().Decompress(uncompressedBuffer.ToArray(), 0, (int)uncompressedBuffer.Length);
-                    UncompressedScratch.Write(decompress, 0, decompress.Length);
-					UncompressedScratch.Position = 0;
-                    UncompressedScratch.SetLength(decompress.Length);
-                    uncompressedData = Slices.CopiedBuffer(UncompressedScratch);
+                    UncompressedScratch = new MemoryStream(uncompressedLength);
                 }
-            }
-            else
-            {
-                uncompressedData = Slices.CopiedBuffer(uncompressedBuffer);
+                UncompressedScratch.Clear();
+                Compressions.Decompress(blockTrailer.CompressionType, compressedStream, UncompressedScratch);
+                uncompressedData = Slices.CopiedBuffer(UncompressedScratch);
             }
 
             return new Block(uncompressedData, Comparator);
@@ -107,17 +78,17 @@ namespace LevelDB.Table
         private MemoryStream Read(long offset, int length)
         {
             var uncompressedBuffer = new MemoryStream(length);
-			var prevPos = FileChannel.Position;
-			FileChannel.Position = offset;
-			var tmpArr = new byte[length];
-			FileChannel.Read(tmpArr, 0, length);
-			uncompressedBuffer.Write(tmpArr, 0, length);
+            var prevPos = FileChannel.Position;
+            FileChannel.Position = offset;
+            var tmpArr = new byte[length];
+            FileChannel.Read(tmpArr, 0, length);
+            uncompressedBuffer.Write(tmpArr, 0, length);
             if (uncompressedBuffer.Remaining() >= 2)
             {
                 throw new IOException("Could not read all the data");
             }
-			FileChannel.Position = prevPos;
-			uncompressedBuffer.Clear();
+            FileChannel.Position = prevPos;
+            uncompressedBuffer.Clear();
             return uncompressedBuffer;
         }
     }

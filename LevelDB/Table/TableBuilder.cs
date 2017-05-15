@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.IO;
 using LevelDB.Guava;
 using LevelDB.Util;
-using Snappy.Sharp;
 using static LevelDB.Impl.VersionSet;
 
 namespace LevelDB.Table
@@ -145,47 +144,22 @@ namespace LevelDB.Table
             var blockContents = raw;
 
             var blockCompressionType = CompressionType.None;
-            /**
-            if (compressionType == CompressionType.Z)
-            {
-                ensureCompressedOutputCapacity(maxCompressedLength(raw.length()));
-                try
-                {
-                    int compressedSize = Zlib.compress(raw.getRawArray(), raw.getRawOffset(), raw.length(),
-                        compressedOutput.getRawArray(), 0);
 
-                    // Don't use the compressed data if compressed less than 12.5%,
-                    if (compressedSize < raw.length() - (raw.length() / 8))
-                    {
-                        blockContents = compressedOutput.slice(0, compressedSize);
-                        blockCompressionType = CompressionType.ZLIB;
-                    }
-                }
-                catch (IOException ignored)
-                {
-                    // compression failed, so just store uncompressed form
-                }
-            } else
-            **/
-            if (_compressionType == CompressionType.Snappy)
+            EnsureCompressedOutputCapacity(MaxCompressedLength(raw.Length));
+            try
             {
-                EnsureCompressedOutputCapacity(MaxCompressedLength(raw.Length));
-                try
-                {
-                    var compressedSize = new SnappyCompressor().Compress(raw.GetRawArray(), raw.GetRawOffset(),
-                        raw.Length, _compressedOutput.GetRawArray(), 0);
+                var compressedSize = (int) Compressions.Compress(_compressionType, raw, _compressedOutput);
 
-                    // Don't use the compressed data if compressed less than 12.5%,
-                    if (compressedSize < raw.Length - raw.Length / 8)
-                    {
-                        blockContents = _compressedOutput.Sliced(0, compressedSize);
-                        blockCompressionType = CompressionType.Snappy;
-                    }
-                }
-                catch (IOException)
+                // Don't use the compressed data if compressed less than 12.5%,
+                if (compressedSize < raw.Length - raw.Length / 8)
                 {
-                    // compression failed, so just store uncompressed form
+                    blockContents = _compressedOutput.Sliced(0, compressedSize);
+                    blockCompressionType = _compressionType;
                 }
+            }
+            catch (IOException)
+            {
+                // compression failed, so just store uncompressed form
             }
 
             // create block trailer

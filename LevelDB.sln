@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Crc32C.Sharp.Test", "Common
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snappy.Sharp.Test", "Common\Snappy.Sharp.Test\Snappy.Sharp.Test.csproj", "{C3C15326-E12A-4F49-8D08-29DE9853EE6F}"
 EndProject
+Project("{AD57C758-203C-4A85-ADA3-FBE13271352E}") = "LevelDB-Zlib", "LevelDB-Zlib\LevelDB-Zlib.csproj", "{D8F775DB-E79F-484A-9B32-C8B8A2EC3757}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -51,6 +53,10 @@ Global
 		{C3C15326-E12A-4F49-8D08-29DE9853EE6F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C3C15326-E12A-4F49-8D08-29DE9853EE6F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C3C15326-E12A-4F49-8D08-29DE9853EE6F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D8F775DB-E79F-484A-9B32-C8B8A2EC3757}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D8F775DB-E79F-484A-9B32-C8B8A2EC3757}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D8F775DB-E79F-484A-9B32-C8B8A2EC3757}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D8F775DB-E79F-484A-9B32-C8B8A2EC3757}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

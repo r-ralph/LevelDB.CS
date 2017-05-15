@@ -25,27 +25,34 @@ namespace LevelDB
     {
         public static readonly CompressionType None = new CompressionType(0x00);
         public static readonly CompressionType Snappy = new CompressionType(0x01);
-        public static readonly CompressionType Zlib = new CompressionType(0x02);
 
-        public static IEnumerable<CompressionType> Values
+        private static readonly IDictionary<int, CompressionType> Mapping = new Dictionary<int, CompressionType>();
+
+        static CompressionType()
         {
-            get
+            Register(None);
+            Register(Snappy);
+        }
+
+        public static void Register(CompressionType compressionType)
+        {
+            if (Mapping.ContainsKey(compressionType.PersistentId))
             {
-                yield return None;
-                yield return Snappy;
-                yield return Zlib;
+                throw new InvalidOperationException(
+                    $"Trying to register same CompressionType(id={compressionType.PersistentId})");
             }
+            Mapping.Add(compressionType.PersistentId, compressionType);
         }
 
         public byte PersistentId { get; }
 
         public static CompressionType GetCompressionTypeByPersistentId(int persistentId)
         {
-            foreach (var compressionType in Values)
+            foreach (var entry in Mapping)
             {
-                if (compressionType.PersistentId == persistentId)
+                if (entry.Key == persistentId)
                 {
-                    return compressionType;
+                    return entry.Value;
                 }
             }
             throw new ArgumentException("Unknown persistent id :" + persistentId);

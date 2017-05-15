@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard1.4</TargetFramework>
+    <AssemblyName>LevelDB-Zlib</AssemblyName>
+    <Authors>Ralph</Authors>
+    <Company />
+    <Description>LevelDB porting to .NET Standard. Plugin for supporting Zlib compression.</Description>
+    <PackageLicenseUrl>https://github.com/r-ralph/LevelDB.Standard/blob/master/LICENSE</PackageLicenseUrl>
+    <Copyright>Copyright (c) 2017 Ralph (Tamaki Hidetsugu)</Copyright>
+    <PackageProjectUrl>https://github.com/r-ralph/LevelDB.Standard</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/r-ralph/LevelDB.Standard</RepositoryUrl>
+    <RepositoryType>Git</RepositoryType>
+    <RootNamespace>LevelDB</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\LevelDB\LevelDB.csproj">
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Iconic.Zlib.Netstandard" Version="1.0.0">
+    </PackageReference>
+  </ItemGroup>
+</Project>
