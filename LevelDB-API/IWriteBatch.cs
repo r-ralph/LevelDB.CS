@@ -20,10 +20,10 @@ using System;
 
 namespace LevelDB
 {
-    public interface IWriteBatch : IDisposable
+    public interface IWriteBatch<out T> : IDisposable where T : IWriteBatch<T>
     {
-        IWriteBatch Put(byte[] key, byte[] value);
+        T Put(byte[] key, byte[] value);
 
-        IWriteBatch Delete(byte[] key);
+        T Delete(byte[] key);
     }
 }

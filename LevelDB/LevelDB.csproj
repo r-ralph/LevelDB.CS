@@ -12,13 +12,15 @@
     <RepositoryType>Git</RepositoryType>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Common\Crc32C.Sharp\Crc32C.Sharp.csproj">
-    </ProjectReference>
-    <ProjectReference Include="..\Common\Snappy.Sharp\Snappy.Sharp.csproj">
+    <ProjectReference Include="..\Common\LRUCache\LRUCache.csproj">
+      <Project>{c8ba4354-a47a-4ca4-a395-dc8188159f1d}</Project>
+      <Name>LRUCache</Name>
     </ProjectReference>
     <ProjectReference Include="..\LevelDB-API\LevelDB-API.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="CRC32C.Standard" Version="1.0.0" />
+    <PackageReference Include="Snappy.Sharp" Version="1.0.0-b20170602007" />
     <PackageReference Include="System.Collections.Immutable" Version="1.3.1">
     </PackageReference>
   </ItemGroup>

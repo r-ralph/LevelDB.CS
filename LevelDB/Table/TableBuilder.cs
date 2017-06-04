@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using LevelDB.Guava;
 using LevelDB.Util;
+using Ralph.Crc32C;
 using static LevelDB.Impl.VersionSet;
 
 namespace LevelDB.Table
@@ -261,7 +262,7 @@ namespace LevelDB.Table
 
         public static uint Crc32C(Slice data, CompressionType type)
         {
-            var crc32C = new Crc32C.Sharp.Crc32C();
+            var crc32C = new Crc32C();
             crc32C.Update(data.GetRawArray(), data.GetRawOffset(), data.Length);
             crc32C.Update(type.PersistentId & 0xFF);
             return crc32C.GetMaskedValue();

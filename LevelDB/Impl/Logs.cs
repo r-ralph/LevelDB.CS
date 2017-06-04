@@ -16,12 +16,28 @@
 
 #endregion
 
+using System.IO;
 using LevelDB.Util;
+using Ralph.Crc32C;
 
 namespace LevelDB.Impl
 {
     public static class Logs
     {
+        public static ILogWriter CreateLogWriter(FileInfo file, long fileNumber)
+        {
+            //if (Iq80DBFactory.USE_MMAP)
+            //{
+            //    return new MMapLogWriter(file, fileNumber);
+            //}
+            //else
+            //{
+            return new FileStreamLogWriter(file, fileNumber);
+            //}
+
+            return null;
+        }
+
         public static uint GetChunkChecksum(int chunkTypeId, Slice slice)
         {
             return GetChunkChecksum(chunkTypeId, slice.GetRawArray(), slice.GetRawOffset(), slice.Length);
@@ -30,7 +46,7 @@ namespace LevelDB.Impl
         public static uint GetChunkChecksum(int chunkTypeId, byte[] buffer, int offset, int length)
         {
             // Compute the crc of the record type and the payload.
-            var crc32C = new Crc32C.Sharp.Crc32C();
+            var crc32C = new Crc32C();
             crc32C.Update(chunkTypeId);
             crc32C.Update(buffer, offset, length);
             return crc32C.GetMaskedValue();

@@ -77,6 +77,10 @@ namespace LevelDB.Util
             return _nextElement;
         }
 
+        public void Dispose()
+        {
+        }
+
         protected abstract void SeekToFirstInternal();
 
         protected abstract void SeekInternal(TK targetKey);
@@ -93,11 +97,6 @@ namespace LevelDB.Util
         }
 
         public Entry<TK, TV> Remove()
-        {
-            throw new NotSupportedException();
-        }
-
-        public void Dispose()
         {
             throw new NotSupportedException();
         }

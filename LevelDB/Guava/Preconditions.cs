@@ -8,6 +8,15 @@ namespace LevelDB.Guava
     /// </summary>
     public class Preconditions
     {
+        public static T CheckNotNull<T>(T obj)
+        {
+            if (obj == null)
+            {
+                throw new NullReferenceException();
+            }
+            return obj;
+        }
+
         public static T CheckNotNull<T>(T obj, string message)
         {
             if (obj == null)

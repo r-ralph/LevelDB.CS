@@ -16,25 +16,28 @@
 
 #endregion
 
-using System;
 using System.Collections.Generic;
 
 namespace LevelDB
 {
-    public interface IDBIterator : IEnumerable<KeyValuePair<byte[], byte[]>>, IDisposable
+    public interface IDBIterator<out T> : IEnumerator<T> where T : Entry<byte[], byte[]>
     {
         void Seek(byte[] key);
 
         void SeekToFirst();
 
-        KeyValuePair<byte[], byte[]> PeekNext();
+        T PeekNext();
 
         bool HasPrev();
 
-        KeyValuePair<byte[], byte[]> Prev();
+        T Prev();
 
-        KeyValuePair<byte[], byte[]> PeekPrev();
+        T PeekPrev();
 
         void SeekToLast();
+
+        bool HasNext();
+
+        T Next();
     }
 }

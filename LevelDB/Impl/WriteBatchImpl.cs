@@ -16,13 +16,14 @@
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using LevelDB.Guava;
 using LevelDB.Util;
 
 namespace LevelDB.Impl
 {
-    public class WriteBatchImpl : IWriteBatch
+    public class WriteBatchImpl : IWriteBatch<WriteBatchImpl>
     {
         private readonly IList<Entry<Slice, Slice>> _batch = new List<Entry<Slice, Slice>>();
 
@@ -30,7 +31,7 @@ namespace LevelDB.Impl
 
         public int Size => _batch.Count;
 
-        public IWriteBatch Put(byte[] key, byte[] value)
+        public WriteBatchImpl Put(byte[] key, byte[] value)
         {
             Preconditions.CheckNotNull(key, $"{key} is null");
             Preconditions.CheckNotNull(value, $"{value} is null");
@@ -39,7 +40,7 @@ namespace LevelDB.Impl
             return this;
         }
 
-        public IWriteBatch Put(Slice key, Slice value)
+        public WriteBatchImpl Put(Slice key, Slice value)
         {
             Preconditions.CheckNotNull(key, $"{key} is null");
             Preconditions.CheckNotNull(value, $"{value} is null");
@@ -48,7 +49,7 @@ namespace LevelDB.Impl
             return this;
         }
 
-        public IWriteBatch Delete(byte[] key)
+        public WriteBatchImpl Delete(byte[] key)
         {
             Preconditions.CheckNotNull(key, $"{key} is null");
             _batch.Add(new ImmutableEntry<Slice, Slice>(Slices.WrappedBuffer(key), null));
@@ -56,7 +57,7 @@ namespace LevelDB.Impl
             return this;
         }
 
-        public IWriteBatch Delete(Slice key)
+        public WriteBatchImpl Delete(Slice key)
         {
             Preconditions.CheckNotNull(key, $"{key} is null");
             _batch.Add(new ImmutableEntry<Slice, Slice>(key, null));
@@ -84,6 +85,11 @@ namespace LevelDB.Impl
                     handler.Delete(key);
                 }
             }
+        }
+
+        public void ForEach(Action<Slice, Slice> putAction, Action<Slice> deleteAction)
+        {
+            throw new NotImplementedException();
         }
 
         public interface IHandler

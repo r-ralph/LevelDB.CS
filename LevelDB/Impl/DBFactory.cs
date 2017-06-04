@@ -16,16 +16,26 @@
 
 #endregion
 
+using System;
 using System.IO;
 
-namespace LevelDB
+namespace LevelDB.Impl
 {
-    public interface IDBFactory<WB> where WB: IWriteBatch<WB>
+    public class DBFactory : IDBFactory<WriteBatchImpl>
     {
-        DB<IDBIterator<Entry<byte[], byte[]>>, WB> Open(DirectoryInfo path, Options options);
+        public DB<IDBIterator<Entry<byte[], byte[]>>, WriteBatchImpl> Open(DirectoryInfo path, Options options)
+        {
+            return new DbImpl(options, path);
+        }
 
-        void Destroy(DirectoryInfo path, Options options);
+        public void Destroy(DirectoryInfo path, Options options)
+        {
+            path.Delete(true);
+        }
 
-        void Repair(DirectoryInfo path, Options options);
+        public void Repair(DirectoryInfo path, Options options)
+        {
+            throw new NotSupportedException();
+        }
     }
 }

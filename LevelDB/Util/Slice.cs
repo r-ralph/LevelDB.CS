@@ -466,8 +466,7 @@ namespace LevelDB.Util
             var readBytes = 0;
             do
             {
-                var localReadBytes = input.Read(_data, index, length);
-                if (localReadBytes < 0)
+                if (input.IsEof())
                 {
                     if (readBytes == 0)
                     {
@@ -475,6 +474,7 @@ namespace LevelDB.Util
                     }
                     break;
                 }
+                var localReadBytes = input.Read(_data, index, length);                
                 readBytes += localReadBytes;
                 index += localReadBytes;
                 length -= localReadBytes;

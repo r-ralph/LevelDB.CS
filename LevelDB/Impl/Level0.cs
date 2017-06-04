@@ -25,47 +25,56 @@ using LevelDB.Util;
 
 namespace LevelDB.Impl
 {
-    public class Level : ISeekingIterable<InternalKey, Slice>
+    public class Level0 : ISeekingIterable<InternalKey, Slice>
     {
-        public int LevelNumber { get; }
+        public int LevelNumber => 0;
         public List<FileMetaData> Files { get; }
+
         private readonly TableCache _tableCache;
         private readonly InternalKeyComparator _internalKeyComparator;
 
-        public Level(int levelNumber, List<FileMetaData> files, TableCache tableCache,
-            InternalKeyComparator internalKeyComparator)
+        public class NewestFirstComparer : IComparer<FileMetaData>
         {
-            Preconditions.CheckArgument(levelNumber >= 0, $"{nameof(levelNumber)} is negative");
-            Preconditions.CheckNotNull(files, $"{nameof(files)} is null");
-            Preconditions.CheckNotNull(tableCache, $"{nameof(tableCache)} is null");
-            Preconditions.CheckNotNull(internalKeyComparator, $"{nameof(internalKeyComparator)} is null");
+            public static readonly NewestFirstComparer Instance = new NewestFirstComparer();
+
+            private NewestFirstComparer()
+            {
+            }
+
+            public int Compare(FileMetaData fileMetaData, FileMetaData fileMetaData1)
+            {
+                if (fileMetaData1 != null && fileMetaData != null)
+                {
+                    return (int) (fileMetaData1.Number - fileMetaData.Number);
+                }
+                return 0;
+            }
+        }
+
+        public Level0(List<FileMetaData> files, TableCache tableCache, InternalKeyComparator internalKeyComparator)
+        {
+            Preconditions.CheckNotNull(files, "files is null");
+            Preconditions.CheckNotNull(tableCache, "tableCache is null");
+            Preconditions.CheckNotNull(internalKeyComparator, "internalKeyComparator is null");
 
             Files = new List<FileMetaData>(files);
             _tableCache = tableCache;
             _internalKeyComparator = internalKeyComparator;
-            Preconditions.CheckArgument(levelNumber >= 0, $"{nameof(levelNumber)} is negative");
-            LevelNumber = levelNumber;
         }
 
-        public LevelIterator GetLevelIterator()
+        public Level0Iterator GetLevel0Iterator()
         {
-            return CreateLevelConcatIterator(_tableCache, Files, _internalKeyComparator);
+            return new Level0Iterator(_tableCache, Files, _internalKeyComparator);
         }
 
         public IEnumerator<Entry<InternalKey, Slice>> GetEnumerator()
         {
-            return GetLevelIterator();
+            return GetLevel0Iterator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return GetLevelIterator();
-        }
-
-        public static LevelIterator CreateLevelConcatIterator(TableCache tableCache, IList<FileMetaData> files,
-            InternalKeyComparator internalKeyComparator)
-        {
-            return new LevelIterator(tableCache, files, internalKeyComparator);
+            return GetLevel0Iterator();
         }
 
         public LookupResult Get(LookupKey key, ReadStats readStats)
@@ -76,50 +85,15 @@ namespace LevelDB.Impl
             }
 
             var fileMetaDataList = new List<FileMetaData>(Files.Count);
-            if (LevelNumber == 0)
-            {
-                fileMetaDataList.AddRange(Files.Where(fileMetaData =>
-                    _internalKeyComparator.UserComparator.Compare(key.UserKey, fileMetaData.Smallest.UserKey) >= 0 &&
-                    _internalKeyComparator.UserComparator.Compare(key.UserKey, fileMetaData.Largest.UserKey) <= 0));
-            }
-            else
-            {
-                // Binary search to find earliest index whose largest key >= ikey.
-                var index = CeilingEntryIndex(Files.Select(FileMetaData.GetLargestUserKey).ToList(), key.InternalKey,
-                    _internalKeyComparator);
+            fileMetaDataList.AddRange(Files.Where(fileMetaData =>
+                _internalKeyComparator.UserComparator.Compare(key.UserKey, fileMetaData.Smallest.UserKey) >= 0 &&
+                _internalKeyComparator.UserComparator.Compare(key.UserKey, fileMetaData.Largest.UserKey) <= 0));
 
-                // did we find any files that could contain the key?
-                if (index >= Files.Count)
-                {
-                    return null;
-                }
+            fileMetaDataList.Sort(NewestFirstComparer.Instance);
 
-                // check if the smallest user key in the file is less than the target user key
-                var fileMetaData = Files[index];
-                if (_internalKeyComparator.UserComparator.Compare(key.UserKey, fileMetaData.Smallest.UserKey) < 0)
-                {
-                    return null;
-                }
-
-                // search this file
-                fileMetaDataList.Add(fileMetaData);
-            }
-
-            FileMetaData lastFileRead = null;
-            var lastFileReadLevel = -1;
             readStats.Clear();
             foreach (var fileMetaData in fileMetaDataList)
             {
-                if (lastFileRead != null && readStats.SeekFile == null)
-                {
-                    // We have had more than one seek for this read.  Charge the first file.
-                    readStats.SeekFile = lastFileRead;
-                    readStats.SeekFileLevel = lastFileReadLevel;
-                }
-
-                lastFileRead = fileMetaData;
-                lastFileReadLevel = LevelNumber;
-
                 // open the iterator
                 var iterator = _tableCache.NewIterator(fileMetaData);
 
@@ -148,19 +122,16 @@ namespace LevelDB.Impl
                         }
                     }
                 }
+
+                if (readStats.SeekFile == null)
+                {
+                    // We have had more than one seek for this read.  Charge the first file.
+                    readStats.SeekFile = fileMetaData;
+                    readStats.SeekFileLevel = 0;
+                }
             }
 
             return null;
-        }
-
-        private static int CeilingEntryIndex<T>(List<T> list, T key, IComparer<T> comparator)
-        {
-            var insertionPoint = list.BinarySearch(key, comparator);
-            if (insertionPoint < 0)
-            {
-                insertionPoint = -(insertionPoint + 1);
-            }
-            return insertionPoint;
         }
 
         public bool SomeFileOverlapsRange(Slice smallestUserKey, Slice largestUserKey)
@@ -213,7 +184,7 @@ namespace LevelDB.Impl
 
         public override string ToString()
         {
-            return $"Level(levelNumber={LevelNumber}, files={Files})";
+            return $"Level0(files={Files})";
         }
     }
 }

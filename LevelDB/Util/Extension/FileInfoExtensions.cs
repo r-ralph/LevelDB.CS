@@ -21,5 +21,10 @@ namespace LevelDB.Util.Extension
                 return false;
             }
         }
+
+        public static bool IsReadable(this FileInfo fileInfo)
+        {
+            return (fileInfo.Attributes & FileAttributes.ReadOnly) != 0;
+        }
     }
 }

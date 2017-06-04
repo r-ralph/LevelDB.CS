@@ -23,29 +23,31 @@ using System.Diagnostics.CodeAnalysis;
 namespace LevelDB
 {
     [SuppressMessage("ReSharper", "InconsistentNaming")]
-    public interface DB : IEnumerable<KeyValuePair<byte[], byte[]>>, IDisposable
+    public interface DB<out T, WB> : IEnumerable<Entry<byte[], byte[]>>, IDisposable
+        where T : IDBIterator<Entry<byte[], byte[]>> 
+        where WB : IWriteBatch<WB>
     {
         byte[] Get(byte[] key);
 
         byte[] Get(byte[] key, ReadOptions options);
 
-        new IDBIterator GetEnumerator();
+        new T GetEnumerator();
 
-        IDBIterator GetEnumerator(ReadOptions options);
+        T GetEnumerator(ReadOptions options);
 
         void Put(byte[] key, byte[] value);
 
         void Delete(byte[] key);
 
-        void Write(IWriteBatch updates);
+        void Write(WB updates);
 
-        IWriteBatch CreateWriteBatch();
+        WB CreateWriteBatch();
 
         ISnapshot Put(byte[] key, byte[] value, WriteOptions options);
 
         ISnapshot Delete(byte[] key, WriteOptions options);
 
-        ISnapshot Write(IWriteBatch updates, WriteOptions options);
+        ISnapshot Write(WB updates, WriteOptions options);
 
         ISnapshot GetSnapshot();
 

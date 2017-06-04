@@ -24,7 +24,7 @@ using LevelDB.Util.Extension;
 
 namespace LevelDB.Impl
 {
-    public class InternalKeyComparator : Comparer<InternalKey>
+    public class InternalKeyComparator : Comparer<InternalKey>, IEqualityComparer<InternalKey>
     {
         public IUserComparator UserComparator { get; }
 
@@ -54,6 +54,16 @@ namespace LevelDB.Impl
         public bool IsOrdered(params InternalKey[] keys)
         {
             return keys.ToList().IsOrdered(this);
+        }
+
+        public bool Equals(InternalKey x, InternalKey y)
+        {
+            return x.Equals(y);
+        }
+
+        public int GetHashCode(InternalKey obj)
+        {
+            return obj.GetHashCode();
         }
     }
 }

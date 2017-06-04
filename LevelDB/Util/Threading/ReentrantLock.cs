@@ -16,16 +16,32 @@
 
 #endregion
 
-using System.IO;
+using System.Threading;
 
-namespace LevelDB
+namespace LevelDB.Util.Threading
 {
-    public interface IDBFactory<WB> where WB: IWriteBatch<WB>
+    public class ReentrantLock
     {
-        DB<IDBIterator<Entry<byte[], byte[]>>, WB> Open(DirectoryInfo path, Options options);
+        private readonly object _lock = new object();
 
-        void Destroy(DirectoryInfo path, Options options);
+        public void Lock()
+        {
+            Monitor.Enter(_lock);
+        }
 
-        void Repair(DirectoryInfo path, Options options);
+        public void Unlock()
+        {
+            Monitor.Exit(_lock);
+        }
+
+        public bool IsHeldByCurrentThread()
+        {
+            return Monitor.IsEntered(_lock);
+        }
+
+        public Condition NewCondition()
+        {
+            return new Condition();
+        }
     }
 }
