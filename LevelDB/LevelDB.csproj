@@ -12,10 +12,6 @@
     <RepositoryType>Git</RepositoryType>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Common\LRUCache\LRUCache.csproj">
-      <Project>{c8ba4354-a47a-4ca4-a395-dc8188159f1d}</Project>
-      <Name>LRUCache</Name>
-    </ProjectReference>
     <ProjectReference Include="..\LevelDB-API\LevelDB-API.csproj" />
   </ItemGroup>
   <ItemGroup>

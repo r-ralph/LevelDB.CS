@@ -18,7 +18,6 @@
 
 using System;
 using System.IO;
-using Caching;
 using LevelDB.Guava;
 using LevelDB.Table;
 using LevelDB.Util;

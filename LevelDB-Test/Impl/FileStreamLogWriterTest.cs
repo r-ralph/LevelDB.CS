@@ -4,7 +4,7 @@ using Xunit;
 
 namespace LevelDB.Impl
 {
-    public class TestFileStreamLogWriter
+    public class FileStreamLogWriterTest
     {
         [Fact]
         public void TestLogRecordBounds()

@@ -49,7 +49,7 @@ namespace LevelDB.Impl
 
             File = file;
             FileNumber = fileNumber;
-            _fileStream = file.OpenWrite();
+            _fileStream = file.Open(FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite);
         }
 
         public void Close()

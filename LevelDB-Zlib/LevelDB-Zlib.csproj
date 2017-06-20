@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard1.4</TargetFramework>
-    <AssemblyName>LevelDB-Zlib</AssemblyName>
+    <AssemblyName>LevelDB.Standard.Zlib</AssemblyName>
     <Authors>Ralph</Authors>
     <Company />
     <Description>LevelDB porting to .NET Standard. Plugin for supporting Zlib compression.</Description>

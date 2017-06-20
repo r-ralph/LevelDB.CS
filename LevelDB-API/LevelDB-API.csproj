@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard1.4</TargetFramework>
-    <AssemblyName>LevelDB-API.Standard</AssemblyName>
+    <AssemblyName>LevelDB.Standard.API</AssemblyName>
     <RootNamespace>LevelDB</RootNamespace>
     <Authors>Ralph</Authors>
     <Company />
