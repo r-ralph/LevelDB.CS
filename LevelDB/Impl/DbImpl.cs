@@ -119,8 +119,8 @@ namespace LevelDB.Impl
             {
                 databaseDir.Create();
             }
-            Preconditions.CheckArgument(databaseDir.Exists,
-                $"Database directory '{nameof(databaseDir)}' does not exist and could not be created");
+            Preconditions.CheckArgument(Directory.Exists(databaseDir.FullName),
+                $"Database directory '{databaseDir.FullName}' does not exist and could not be created");
             mutex.Lock();
             try
             {

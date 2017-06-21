@@ -18,11 +18,17 @@
 
 using System;
 using System.IO;
+using LevelDB.Util;
 
 namespace LevelDB.Impl
 {
     public class DBFactory : IDBFactory<WriteBatchImpl>
     {
+        // TODO: use Environment.​Is64Bit​Process when update to .NET Standard 2.0
+        public static readonly bool UseMMap = bool.Parse(Environment.GetEnvironmentVariable("leveldb.mmap") ?? "true");
+
+        public static readonly DBFactory Factory = new DBFactory();
+
         public DB<IDBIterator<Entry<byte[], byte[]>>, WriteBatchImpl> Open(DirectoryInfo path, Options options)
         {
             return new DbImpl(options, path);
@@ -30,7 +36,8 @@ namespace LevelDB.Impl
 
         public void Destroy(DirectoryInfo path, Options options)
         {
-            path.Delete(true);
+            // TODO: Delete only leveldb database
+            FileUtil.DeleteRecursively(path);
         }
 
         public void Repair(DirectoryInfo path, Options options)

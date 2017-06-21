@@ -249,7 +249,7 @@ namespace LevelDB.Util
         /// <exception cref="IndexOutOfRangeException">If the specified <code>index</code> is less than <code>0</code> or
         /// if <code>index + dst.remaining()</code> is greater than
         /// <code>this.capacity</code></exception>
-        public void GetBytes(int index, MemoryStream destination)
+        public void GetBytes(int index, Stream destination)
         {
             Preconditions.CheckPositionIndex(index, Length);
             index += _offset;

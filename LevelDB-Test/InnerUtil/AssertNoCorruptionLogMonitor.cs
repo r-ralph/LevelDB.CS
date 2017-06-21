@@ -16,25 +16,17 @@
 
 #endregion
 
-using System.IO;
+using LevelDB.Impl;
+using Xunit;
 
-namespace LevelDB.Util.Extension
+namespace LevelDB.InnerUtil
 {
-    public static class MemoryStreamExtensions
+    public class AssertNoCorruptionLogMonitor : LogMonitor
     {
-        public static void Clear(this MemoryStream stream)
+        public AssertNoCorruptionLogMonitor() : base(
+            (bytes, reason) => { Assert.True(false, "corruption at " + bytes + " reason: " + reason); },
+            (bytes, reason) => { Assert.True(false, "corruption at " + bytes + " reason: " + reason); })
         {
-            stream.Position = 0;
-        }
-
-        public static MemoryStream Duplicate(this MemoryStream ms)
-        {
-            var pos = ms.Position;
-            var ms2 = new MemoryStream();
-            ms.CopyTo(ms2);
-            ms.Position = pos;
-            ms2.Position = pos;
-            return ms2;
         }
     }
 }

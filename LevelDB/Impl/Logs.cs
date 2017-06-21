@@ -26,16 +26,11 @@ namespace LevelDB.Impl
     {
         public static ILogWriter CreateLogWriter(FileInfo file, long fileNumber)
         {
-            //if (Iq80DBFactory.USE_MMAP)
-            //{
-            //    return new MMapLogWriter(file, fileNumber);
-            //}
-            //else
-            //{
+            if (DBFactory.UseMMap)
+            {
+                return new MMapLogWriter(file, fileNumber);
+            }
             return new FileStreamLogWriter(file, fileNumber);
-            //}
-
-            return null;
         }
 
         public static uint GetChunkChecksum(int chunkTypeId, Slice slice)

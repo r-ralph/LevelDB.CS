@@ -24,5 +24,15 @@ namespace LevelDB.Util.Extension
         {
             return stream.Position == stream.Length;
         }
+
+        public static long Remaining(this Stream stream)
+        {
+            return stream.Length - stream.Position;
+        }
+
+        public static void Put(this Stream stream, byte[] buffer, int offset, int count)
+        {
+            stream.Write(buffer, offset, count);
+        }
     }
 }

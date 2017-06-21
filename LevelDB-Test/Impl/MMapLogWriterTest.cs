@@ -23,7 +23,7 @@ using Xunit;
 
 namespace LevelDB.Impl
 {
-    public class FileStreamLogWriterTest
+    public class MMapLogWriterTest
     {
         [Fact]
         public void TestLogRecordBounds()
@@ -31,10 +31,10 @@ namespace LevelDB.Impl
             var file = new FileInfo(Path.GetTempFileName());
             try
             {
-                var recordSize = LogConstants.BlockSize - LogConstants.HeaderSize;
+                const int recordSize = LogConstants.BlockSize - LogConstants.HeaderSize;
                 var record = new Slice(recordSize);
 
-                ILogWriter writer = new FileStreamLogWriter(file, 10);
+                ILogWriter writer = new MMapLogWriter(file, 10);
                 writer.AddRecord(record, false);
                 writer.Close();
 

@@ -21,6 +21,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using LevelDB.InnerUtil;
 using LevelDB.Util;
 using Xunit;
 
@@ -28,20 +29,19 @@ namespace LevelDB.Impl
 {
     public class LogTest : IDisposable
     {
-        private static readonly LogMonitor NoCorruptionMonitor = new LogMonitor(
-            (bytes, reason) => { Assert.True(false, string.Format("corruption of %s bytes: %s", bytes, reason)); },
-            (bytes, reason) => throw new Exception(string.Format("corruption of %s bytes: %s", bytes, reason), reason));
-
         private ILogWriter writer;
+        private AssertNoCorruptionLogMonitor _assertNoCorruptionLogMonitor;
 
         public LogTest()
         {
             writer = Logs.CreateLogWriter(new FileInfo(Path.GetTempFileName()), 42);
+            _assertNoCorruptionLogMonitor = new AssertNoCorruptionLogMonitor();
         }
 
         public void Dispose()
         {
             writer?.Delete();
+            _assertNoCorruptionLogMonitor = null;
         }
 
         [Fact]
@@ -122,7 +122,7 @@ namespace LevelDB.Impl
             // test readRecord
             using (var fileChannel = writer.File.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
-                var reader = new LogReader(fileChannel, NoCorruptionMonitor, true, 0);
+                var reader = new LogReader(fileChannel, _assertNoCorruptionLogMonitor, true, 0);
                 foreach (var expected in records)
                 {
                     var actual = reader.ReadRecord();
