@@ -49,7 +49,7 @@ namespace LevelDB.Impl
         public static string DescriptorFileName(long number)
         {
             Preconditions.CheckArgument(number >= 0, $"{number} is negative");
-            return string.Format("MANIFEST-%06d", number);
+            return string.Format("MANIFEST-{0:D6}", number);
         }
 
         /// <summary>
@@ -188,7 +188,7 @@ namespace LevelDB.Impl
         {
             Preconditions.CheckArgument(number >= 0, $"{nameof(number)} is negative");
             Preconditions.CheckNotNull(suffix, $"{suffix} is null");
-            return string.Format("%06d.%s", number, suffix);
+            return string.Format("{0:D6}.{1}", number, suffix);
         }
 
         private static string RemovePrefix(string value, string prefix)

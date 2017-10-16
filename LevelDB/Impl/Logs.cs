@@ -28,7 +28,7 @@ namespace LevelDB.Impl
         {
             if (DBFactory.UseMMap)
             {
-                return new MMapLogWriter(file, fileNumber);
+                //return new MMapLogWriter(file, fileNumber);
             }
             return new FileStreamLogWriter(file, fileNumber);
         }

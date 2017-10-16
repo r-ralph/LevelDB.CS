@@ -36,15 +36,13 @@ namespace LevelDB.Impl
 
         private readonly MemoryMappedFile _memoryMappedFile;
         private readonly AtomicBoolean _closed = new AtomicBoolean();
-        private MemoryMappedViewStream _mappedByteBuffer;
+        private UnmanagedMemoryStream _mappedByteBuffer;
         private long _fileOffset;
 
         /**
          * Current offset in the current block
          */
         private int _blockOffset;
-
-        private FileStream _fileStream;
 
         public MMapLogWriter(FileInfo file, long fileNumber)
         {
@@ -53,8 +51,7 @@ namespace LevelDB.Impl
 
             File = file;
             FileNumber = fileNumber;
-            _fileStream = file.Open(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
-            _memoryMappedFile = MemoryMappedFile.CreateFromFile(_fileStream, null, PageSize, MemoryMappedFileAccess.ReadWrite, HandleInheritability.None, false);
+            _memoryMappedFile = MemoryMappedFile.CreateFromFile(file.FullName, FileMode.OpenOrCreate, null, PageSize * 10);
             _mappedByteBuffer = _memoryMappedFile.CreateViewStream(0, PageSize, MemoryMappedFileAccess.ReadWrite);
         }
 
@@ -66,7 +63,6 @@ namespace LevelDB.Impl
 
             // close the channel
             Disposables.DisposeQuietly(_memoryMappedFile);
-            Disposables.DisposeQuietly(_fileStream);
 
             using (var stream = File.Open(FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite))
             {
@@ -175,50 +171,52 @@ namespace LevelDB.Impl
         }
 
         private void WriteChunk(LogChunkType type, Slice slice)
-    {
-        Preconditions.CheckArgument(slice.Length <= 0xffff, $"length {slice.Length} is larger than two bytes");
-        Preconditions.CheckArgument(_blockOffset + LogConstants.HeaderSize <= LogConstants.BlockSize);
+        {
+            Preconditions.CheckArgument(slice.Length <= 0xffff, $"length {slice.Length} is larger than two bytes");
+            Preconditions.CheckArgument(_blockOffset + LogConstants.HeaderSize <= LogConstants.BlockSize);
 
-        // create header
-        var header = NewLogRecordHeader(type, slice);
+            // create header
+            var header = NewLogRecordHeader(type, slice);
 
-        // write the header and the payload
-        EnsureCapacity(header.Length + slice.Length);
-        header.GetBytes(0, _mappedByteBuffer);
-        slice.GetBytes(0, _mappedByteBuffer);
+            // write the header and the payload
+            EnsureCapacity(header.Length + slice.Length);
+            header.GetBytes(0, _mappedByteBuffer);
+            slice.GetBytes(0, _mappedByteBuffer);
 
-        _blockOffset += LogConstants.HeaderSize + slice.Length;
-    }
-
-    private void EnsureCapacity(int bytes)
-    {
-        if (_mappedByteBuffer.Remaining() < bytes) {
-            // remap
-            _fileOffset += _mappedByteBuffer.Position;
-            Unmap();
-
-            _mappedByteBuffer = _memoryMappedFile.CreateViewStream(_fileOffset, PageSize, MemoryMappedFileAccess.ReadWrite);
+            _blockOffset += LogConstants.HeaderSize + slice.Length;
         }
-    }
 
-    private void Unmap()
-    {
-        Disposables.DisposeQuietly(_mappedByteBuffer);
-    }
+        private void EnsureCapacity(int bytes)
+        {
+            if (_mappedByteBuffer.Remaining() < bytes)
+            {
+                // remap
+                _fileOffset += _mappedByteBuffer.Position;
+                Unmap();
 
-    private static Slice NewLogRecordHeader(LogChunkType type, Slice slice)
-    {
-        var crc = Logs.GetChunkChecksum(type.PersistentId, slice.GetRawArray(), slice.GetRawOffset(), slice.Length);
+                _mappedByteBuffer =
+                    _memoryMappedFile.CreateViewStream(_fileOffset, PageSize, MemoryMappedFileAccess.ReadWrite);
+            }
+        }
 
-        // Format the header
-        var header = Slices.Allocate(LogConstants.HeaderSize);
-        var sliceOutput = header.Output();
-        sliceOutput.WriteInt((int)crc);
-        sliceOutput.WriteByte((byte) (slice.Length & 0xff));
-        sliceOutput.WriteByte((byte) ((uint)slice.Length >> 8));
-        sliceOutput.WriteByte((byte) type.PersistentId);
+        private void Unmap()
+        {
+            Disposables.DisposeQuietly(_mappedByteBuffer);
+        }
 
-        return header;
-    }
+        private static Slice NewLogRecordHeader(LogChunkType type, Slice slice)
+        {
+            var crc = Logs.GetChunkChecksum(type.PersistentId, slice.GetRawArray(), slice.GetRawOffset(), slice.Length);
+
+            // Format the header
+            var header = Slices.Allocate(LogConstants.HeaderSize);
+            var sliceOutput = header.Output();
+            sliceOutput.WriteInt((int) crc);
+            sliceOutput.WriteByte((byte) (slice.Length & 0xff));
+            sliceOutput.WriteByte((byte) ((uint) slice.Length >> 8));
+            sliceOutput.WriteByte((byte) type.PersistentId);
+
+            return header;
+        }
     }
 }

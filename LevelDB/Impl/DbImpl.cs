@@ -999,7 +999,7 @@ namespace LevelDB.Impl
             }
         }
 
-        private FileMetaData BuildTable(ISeekingIterable<InternalKey, Slice> data, long fileNumber)
+        private FileMetaData BuildTable(MemTable data, long fileNumber)
         {
             var file = new FileInfo(Path.Combine(databaseDir.FullName, Filename.TableFileName(fileNumber)));
             try
@@ -1011,8 +1011,8 @@ namespace LevelDB.Impl
                 {
                     TableBuilder tableBuilder =
                         new TableBuilder(options, channel, new InternalUserComparator(internalKeyComparator));
-
-                    foreach (Entry<InternalKey, Slice> entry in data)
+                    var memTableIterator = data.GetMemTableIterator();
+                    for (Entry<InternalKey, Slice> entry = memTableIterator.Next(); memTableIterator.HasNext(); entry = memTableIterator.Next())
                     {
                         // update keys
                         InternalKey key = entry.Key;
@@ -1357,7 +1357,7 @@ namespace LevelDB.Impl
                 sliceOutput.WriteByte((byte) Value.PersistentId);
                 WriteLengthPrefixedBytes(sliceOutput, key);
                 WriteLengthPrefixedBytes(sliceOutput, value);
-            }, (key) =>
+            }, key =>
             {
                 sliceOutput.WriteByte((byte) Deletion.PersistentId);
                 WriteLengthPrefixedBytes(sliceOutput, key);

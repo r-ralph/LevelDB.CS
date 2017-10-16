@@ -26,7 +26,7 @@ namespace LevelDB.Util
 
         public override List<TValue> this[TKey key]
         {
-            get => _mDictionary[key];
+            get => _mDictionary.ContainsKey(key) ? _mDictionary[key] : null;
             set => _mDictionary[key] = value;
         }
 

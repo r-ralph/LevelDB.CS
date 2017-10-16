@@ -46,7 +46,15 @@ namespace LevelDB.Impl
         public Version Current { get; private set; }
         public long ManifestFileNumber { get; private set; } = 1;
 
-        public long NextFileNumber => Interlocked.Increment(ref _nextFileNumber);
+        public long NextFileNumber
+        {
+            get
+            {
+                var prevValue = Interlocked.Read(ref _nextFileNumber);
+                Interlocked.Increment(ref _nextFileNumber);
+                return prevValue;
+            }
+        }
 
         public long PrevLogNumber { get; private set; }
         public long LogNumber { get; private set; }
@@ -92,7 +100,7 @@ namespace LevelDB.Impl
                 {
                     ComparatorName = InternalKeyComparator.Name,
                     LogNumber = PrevLogNumber,
-                    NextFileNumber = _nextFileNumber,
+                    NextFileNumber = Interlocked.Read(ref _nextFileNumber),
                     LastSequenceNumber = LastSequence
                 };
 
@@ -201,7 +209,7 @@ namespace LevelDB.Impl
             if (edit.LogNumber != null)
             {
                 Preconditions.CheckArgument(edit.LogNumber >= LogNumber);
-                Preconditions.CheckArgument(edit.LogNumber < _nextFileNumber);
+                Preconditions.CheckArgument(edit.LogNumber < Interlocked.Read(ref _nextFileNumber));
             }
             else
             {
@@ -213,7 +221,7 @@ namespace LevelDB.Impl
                 edit.PreviousLogNumber = PrevLogNumber;
             }
 
-            edit.NextFileNumber = _nextFileNumber;
+            edit.NextFileNumber = Interlocked.Read(ref _nextFileNumber);
             edit.LastSequenceNumber = LastSequence;
 
             var version = new Version(this);
@@ -230,7 +238,7 @@ namespace LevelDB.Impl
                 // a temporary file that contains a snapshot of the current version.
                 if (_descriptorLog == null)
                 {
-                    edit.NextFileNumber = _nextFileNumber;
+                    edit.NextFileNumber = Interlocked.Read(ref _nextFileNumber);
                     _descriptorLog = Logs.CreateLogWriter(
                         new FileInfo(
                             Path.Combine(_databaseDir.FullName, Filename.DescriptorFileName(ManifestFileNumber))),
@@ -365,7 +373,6 @@ namespace LevelDB.Impl
                 FinalizeVersion(newVersion);
 
                 AppendVersion(newVersion);
-                Debug.Assert(nextFileNumber != null, "nextFileNumber != null");
                 Debug.Assert(nextFileNumber != null, "nextFileNumber != null");
                 Debug.Assert(lastSequence != null, "lastSequence != null");
                 Debug.Assert(logNumber != null, "logNumber != null");

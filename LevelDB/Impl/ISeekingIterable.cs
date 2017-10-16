@@ -20,7 +20,7 @@ using System.Collections.Generic;
 
 namespace LevelDB.Impl
 {
-    public interface ISeekingIterable<TK, TV> : IEnumerable<Entry<TK, TV>>
+    public interface ISeekingEnumerable<TK, TV> : IEnumerable<Entry<TK, TV>>
     {
     }
 }

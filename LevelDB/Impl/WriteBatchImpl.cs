@@ -67,7 +67,6 @@ namespace LevelDB.Impl
 
         public void Dispose()
         {
-            throw new System.NotImplementedException();
         }
 
         public void ForEach(IHandler handler)
@@ -89,7 +88,19 @@ namespace LevelDB.Impl
 
         public void ForEach(Action<Slice, Slice> putAction, Action<Slice> deleteAction)
         {
-            throw new NotImplementedException();
+            foreach (var entry in _batch)
+            {
+                var key = entry.Key;
+                var value = entry.Value;
+                if (value != null)
+                {
+                    putAction(key, value);
+                }
+                else
+                {
+                    deleteAction(key);
+                }
+            }
         }
 
         public interface IHandler

@@ -148,21 +148,35 @@ namespace LevelDB.Impl
 
             public bool MoveNext()
             {
-                throw new NotSupportedException();
+                if (!HasNext()) return false;
+                _current = Next();
+                return true;
             }
 
             public void Reset()
             {
-                throw new NotSupportedException();
+                SeekToFirst();
             }
 
-            public Entry<InternalKey, Slice> Current => null;
+            private Entry<InternalKey, Slice> _current;
+
+            public Entry<InternalKey, Slice> Current
+            {
+                get
+                {
+                    if (_current == null && HasNext())
+                    {
+                        _current = Next();
+                    }
+                    return _current;
+                }
+            }
 
             object IEnumerator.Current => Current;
 
             public void Dispose()
             {
-                throw new NotSupportedException();
+                Reset();
             }
 
             #endregion
