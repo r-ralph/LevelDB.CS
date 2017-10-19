@@ -1006,14 +1006,15 @@ namespace LevelDB.Impl
             {
                 InternalKey smallest = null;
                 InternalKey largest = null;
-                var channel = file.Open(FileMode.OpenOrCreate, FileAccess.ReadWrite);
+                var channel = file.Open(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
                 try
                 {
                     TableBuilder tableBuilder =
                         new TableBuilder(options, channel, new InternalUserComparator(internalKeyComparator));
                     var memTableIterator = data.GetMemTableIterator();
-                    for (Entry<InternalKey, Slice> entry = memTableIterator.Next(); memTableIterator.HasNext(); entry = memTableIterator.Next())
+                    while(memTableIterator.HasNext())
                     {
+                        var entry = memTableIterator.Next();
                         // update keys
                         InternalKey key = entry.Key;
                         if (smallest == null)
@@ -1201,7 +1202,7 @@ namespace LevelDB.Impl
                 compactionState.currentLargest = null;
 
                 FileInfo file = new FileInfo(Path.Combine(databaseDir.FullName, Filename.TableFileName(fileNumber)));
-                compactionState.outfile = file.Open(FileMode.Open);
+                compactionState.outfile = file.Open(FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
                 compactionState.builder = new TableBuilder(options, compactionState.outfile,
                     new InternalUserComparator(internalKeyComparator));
             }

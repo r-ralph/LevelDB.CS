@@ -22,18 +22,20 @@ namespace LevelDB.Util.Extension
 {
     public static class MemoryStreamExtensions
     {
-        public static void Clear(this MemoryStream stream)
+        public static void Clear(this Stream stream)
         {
             stream.Position = 0;
         }
 
-        public static MemoryStream Duplicate(this MemoryStream ms)
+        public static MemoryStream Duplicate(this Stream ms)
         {
             var pos = ms.Position;
             var ms2 = new MemoryStream();
+            ms.Position = 0;
             ms.CopyTo(ms2);
             ms.Position = pos;
             ms2.Position = pos;
+            ms2.SetLength(ms.Length);
             return ms2;
         }
     }

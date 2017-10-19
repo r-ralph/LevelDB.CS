@@ -76,13 +76,13 @@ namespace LevelDB.Util
             return array.Length == 0 ? EmptySlice : new Slice(array);
         }
 
-        public static Slice CopiedBuffer(MemoryStream source, int sourceOffset, int length)
+        public static Slice CopiedBuffer(Stream source, long sourceOffset, long length)
         {
             Preconditions.CheckNotNull(source, $"{nameof(source)} is null");
             var newPosition = source.Position + sourceOffset;
             var newMs = source.Duplicate();
+            newMs.SetLength(newPosition + length);
             newMs.Position = newPosition;
-            newMs.SetLength(length);
             return CopiedBuffer(newMs);
         }
 

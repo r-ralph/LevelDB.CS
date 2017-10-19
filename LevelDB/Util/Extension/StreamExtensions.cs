@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.IO.MemoryMappedFiles;
 
 namespace LevelDB.Util.Extension
 {
@@ -30,9 +31,19 @@ namespace LevelDB.Util.Extension
             return stream.Length - stream.Position;
         }
 
+        public static long Remaining(this MemoryMappedViewAccessor stream)
+        {
+            return stream.Capacity - stream.PointerOffset;
+        }
+
         public static void Put(this Stream stream, byte[] buffer, int offset, int count)
         {
             stream.Write(buffer, offset, count);
+        }
+
+        public static void Put(this MemoryMappedViewAccessor stream, byte[] buffer, int offset, int count)
+        {
+            stream.WriteArray(stream.PointerOffset, buffer, offset, count);
         }
     }
 }

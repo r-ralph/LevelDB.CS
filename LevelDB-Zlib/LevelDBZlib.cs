@@ -38,7 +38,11 @@ namespace LevelDB
                 },
                 (source, dest) =>
                 {
-                    var decompressed = ZlibStream.UncompressBuffer(source.ToArray());
+                    var pos = source.Position;
+                    var size = (int) (source.Length - pos);
+                    var arr = new byte[size];
+                    source.Read(arr, 0, size);
+                    var decompressed = ZlibStream.UncompressBuffer(arr);
                     dest.Write(decompressed, 0, decompressed.Length);
                     dest.Position = 0;
                     dest.SetLength(decompressed.Length);

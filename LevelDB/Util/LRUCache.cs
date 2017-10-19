@@ -209,6 +209,10 @@ namespace LevelDB.Util
         {
             lock (this)
             {
+                foreach (var entry in _entries)
+                {
+                    OnRemove?.Invoke(this, new CacheRemoveEventArgs(entry.Key, entry.Value.Value));
+                }
                 _entries.Clear();
                 _head = null;
                 _tail = null;

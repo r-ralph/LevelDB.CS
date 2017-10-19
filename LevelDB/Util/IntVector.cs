@@ -74,7 +74,7 @@ namespace LevelDB.Util
                 newLength <<= 1;
             }
             var newValues = new int[newLength];
-            Array.Copy(_values, newValues, newLength);
+            Array.Copy(_values, newValues, _values.Length);
             _values = newValues;
         }
 

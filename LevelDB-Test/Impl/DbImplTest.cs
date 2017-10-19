@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Text;
-using LevelDB.Impl;
 using Xunit;
 using static LevelDB.InnerUtil.GenericUtil;
 
@@ -29,12 +28,12 @@ namespace LevelDB.Impl
             options.CreateIfMissing(true);
             DbImpl db = new DbImpl(options, databaseDir);
             Random random = new Random(301);
-            for (int i = 0; i < 200000 * StressFactor; i++)
+            for (int i = 0; i < 2000 * StressFactor; i++)
             {
                 db.Put(Encoding.UTF8.GetBytes(RandomString(random, 64)), new byte[] {0x01},
                     new WriteOptions().Sync(false));
                 db.Get(Encoding.UTF8.GetBytes(RandomString(random, 64)));
-                if (i % 50000 == 0 && i != 0)
+                if (i % 1000 == 0 && i != 0)
                 {
                     Console.WriteLine(i + " rows written");
                 }

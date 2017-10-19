@@ -52,7 +52,11 @@ namespace LevelDB.Util
                 new SnappyCompressor().Compress(source, sourceOffset, sourceLength, dest, 0));
             DecompressionMethods.Add(CompressionType.Snappy.PersistentId, (source, dest) =>
             {
-                var decompressed = new SnappyDecompressor().Decompress(source.ToArray(), 0, (int) source.Length);
+                var pos = source.Position;
+                var size = (int)(source.Length - pos);
+                var arr = new byte[size];
+                source.Read(arr, 0, size);
+                var decompressed = new SnappyDecompressor().Decompress(arr, 0, size);
                 dest.Write(decompressed, 0, decompressed.Length);
                 dest.Position = 0;
                 dest.SetLength(decompressed.Length);

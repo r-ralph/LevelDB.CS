@@ -96,7 +96,7 @@ namespace LevelDB.Table
             Preconditions.CheckState(!_closed, "tabel is finished");
             if (_entryCount > 0)
             {
-                Debug.Assert(_userComparator.Compare(key, _lastKey) > 0); // key must be greater than last key
+                Preconditions.CheckArgument(_userComparator.Compare(key, _lastKey) > 0); // key must be greater than last key
             }
 
             // If we just wrote a block, we can now add the handle to index block

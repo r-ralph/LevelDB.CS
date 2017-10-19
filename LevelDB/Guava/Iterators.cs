@@ -8,60 +8,43 @@ namespace LevelDB.Guava
 {
     public class Iterators
     {
-        private class PeekingImpl<TK, TV> : IPeekingIterator<Entry<TK, TV>>
+        private class PeekingIteratorImpl<TK, TV> : IPeekingIterator<Entry<TK, TV>>
         {
-            private readonly IEnumerator<KeyValuePair<TK,TV>> _iterator;
-            private Entry<TK, TV> _nextElement;
+            private readonly IEnumerator<KeyValuePair<TK, TV>> _iterator;
+            private bool _hasNext;
+            private Entry<TK, TV> _current;
 
-            public PeekingImpl(IEnumerator<KeyValuePair<TK, TV>> iterator)
+            public PeekingIteratorImpl(IEnumerator<KeyValuePair<TK, TV>> iterator)
             {
                 _iterator = Preconditions.CheckNotNull(iterator);
+                if (_iterator.MoveNext())
+                {
+                    _current = new ImmutableEntry<TK, TV>(_iterator.Current.Key, _iterator.Current.Value);
+                }
+                _hasNext = _iterator.MoveNext();
             }
 
             object IEnumerator.Current => Current;
 
             public bool HasNext()
             {
-                if (_nextElement == null)
-                {
-                    _nextElement = GetNextElement();
-                }
-                return _nextElement != null;
+                return _hasNext;
             }
 
             public Entry<TK, TV> Next()
             {
-                if (_nextElement == null)
+                var ret = _current;
+                if (_hasNext)
                 {
-                    _nextElement = GetNextElement();
-                    if (_nextElement == null)
-                    {
-                        throw new InvalidOperationException();
-                    }
+                    _current = new ImmutableEntry<TK, TV>(_iterator.Current.Key, _iterator.Current.Value);
                 }
-
-                var result = _nextElement;
-                _nextElement = default(Entry<TK, TV>);
-                return result;
+                _hasNext = _iterator.MoveNext();
+                return ret;
             }
 
             public Entry<TK, TV> Peek()
             {
-                if (_nextElement != null) return _nextElement;
-                _nextElement = GetNextElement();
-                if (_nextElement == null)
-                {
-                    throw new InvalidOperationException();
-                }
-
-                return _nextElement;
-            }
-
-            private Entry<TK, TV> GetNextElement()
-            {
-                var ret = _iterator.Current;
-                _iterator.MoveNext();
-                return new ImmutableEntry<TK, TV>(ret.Key, ret.Value);
+                return _current;
             }
 
             #region UnSupported methods
@@ -129,9 +112,10 @@ namespace LevelDB.Guava
         ///     additional {@link PeekingIterator#peek()} method, this iterator behaves
         ///     exactly the same as {@code iterator}.
         /// </summary>
-        public static IPeekingIterator<Entry<TK, TV>> PeekingIterator<TK, TV>(IEnumerator<KeyValuePair<TK, TV>> iterator) 
+        public static IPeekingIterator<Entry<TK, TV>> PeekingIterator<TK, TV>(
+            IEnumerator<KeyValuePair<TK, TV>> iterator)
         {
-            return new PeekingImpl<TK, TV>(iterator);
+            return new PeekingIteratorImpl<TK, TV>(iterator);
         }
     }
 }

@@ -34,8 +34,8 @@ namespace LevelDB.Impl
 
         public long FileNumber { get; }
 
-        private readonly MemoryMappedFile _memoryMappedFile;
         private readonly AtomicBoolean _closed = new AtomicBoolean();
+        private MemoryMappedFile _memoryMappedFile;
         private UnmanagedMemoryStream _mappedByteBuffer;
         private long _fileOffset;
 
@@ -51,7 +51,7 @@ namespace LevelDB.Impl
 
             File = file;
             FileNumber = fileNumber;
-            _memoryMappedFile = MemoryMappedFile.CreateFromFile(file.FullName, FileMode.OpenOrCreate, null, PageSize * 10);
+            _memoryMappedFile = MemoryMappedFile.CreateFromFile(file.FullName, FileMode.OpenOrCreate, null, PageSize);
             _mappedByteBuffer = _memoryMappedFile.CreateViewStream(0, PageSize, MemoryMappedFileAccess.ReadWrite);
         }
 
@@ -194,6 +194,8 @@ namespace LevelDB.Impl
                 _fileOffset += _mappedByteBuffer.Position;
                 Unmap();
 
+                _memoryMappedFile = MemoryMappedFile.CreateFromFile(File.FullName, FileMode.OpenOrCreate, null,
+                    _fileOffset + PageSize);
                 _mappedByteBuffer =
                     _memoryMappedFile.CreateViewStream(_fileOffset, PageSize, MemoryMappedFileAccess.ReadWrite);
             }
@@ -202,6 +204,7 @@ namespace LevelDB.Impl
         private void Unmap()
         {
             Disposables.DisposeQuietly(_mappedByteBuffer);
+            Disposables.DisposeQuietly(_memoryMappedFile);
         }
 
         private static Slice NewLogRecordHeader(LogChunkType type, Slice slice)

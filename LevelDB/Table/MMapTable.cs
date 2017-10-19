@@ -18,33 +18,43 @@
 
 using System.Collections.Generic;
 using System.IO;
+using System.IO.MemoryMappedFiles;
+using LevelDB.Guava;
 using LevelDB.Util;
 using LevelDB.Util.Extension;
 
 namespace LevelDB.Table
 {
-    public class FileChannelTable : Table
+    public class MMapTable : Table
     {
         private static readonly object SyncLock = new object();
 
-        public FileChannelTable(string name, FileStream fileStream, IComparer<Slice> comparator,
-            bool verifyChecksums) : base(name, fileStream, comparator, verifyChecksums)
+        private MemoryMappedFile _mappedFile;
+        private MemoryMappedViewStream _data;
+
+        public MMapTable(string name, FileStream fileChannel, IComparer<Slice> comparator, bool verifyChecksums) :
+            base(name, fileChannel, comparator, verifyChecksums)
         {
+            Preconditions.CheckArgument(fileChannel.Length <= int.MaxValue, "File must be smaller than {1} bytes",
+                int.MaxValue);
         }
 
         protected override Footer Init()
         {
             var size = FileChannel.Length;
-            var footerData = Read(size - Footer.EncodedLength, Footer.EncodedLength);
-            return Footer.ReadFooter(Slices.CopiedBuffer(footerData));
+            _mappedFile = MemoryMappedFile.CreateFromFile(FileChannel, null, size,
+                MemoryMappedFileAccess.Read, HandleInheritability.Inheritable, false);
+            _data = _mappedFile.CreateViewStream(0, size, MemoryMappedFileAccess.Read);
+            var footerSlice = Slices.CopiedBuffer(_data, size - Footer.EncodedLength, Footer.EncodedLength);
+            return Footer.ReadFooter(footerSlice);
         }
 
         protected override Block ReadBlock(BlockHandle blockHandle)
         {
             // read block trailer
-            var trailerData = Read(blockHandle.GetOffset() + blockHandle.GetDataSize(),
+            var trailerData = Slices.CopiedBuffer(_data, blockHandle.GetOffset() + blockHandle.GetDataSize(),
                 BlockTrailer.EncodedLength);
-            var blockTrailer = BlockTrailer.ReadBlockTrailer(Slices.CopiedBuffer(trailerData));
+            var blockTrailer = BlockTrailer.ReadBlockTrailer(trailerData);
 
             // todo re-enable crc check when ported to support direct buffers
             // // only verify check sums if explicitly asked by the user
@@ -58,8 +68,8 @@ namespace LevelDB.Table
             // }
 
             // decompress data
-            var compressedStream = Read(blockHandle.GetOffset(), blockHandle.GetDataSize());
             Slice uncompressedData;
+            var compressedStream = Read(_data, blockHandle.GetOffset(), blockHandle.GetDataSize());
             if (blockTrailer.CompressionType == CompressionType.None)
             {
                 uncompressedData = Slices.CopiedBuffer(compressedStream);
@@ -82,21 +92,20 @@ namespace LevelDB.Table
             return new Block(uncompressedData, Comparator);
         }
 
-        private MemoryStream Read(long offset, int length)
+        public override void Dispose()
         {
-            var uncompressedBuffer = new MemoryStream(length);
-            var prevPos = FileChannel.Position;
-            FileChannel.Position = offset;
-            var tmpArr = new byte[length];
-            FileChannel.Read(tmpArr, 0, length);
-            uncompressedBuffer.Write(tmpArr, 0, length);
-            if (uncompressedBuffer.Remaining() >= 2)
-            {
-                throw new IOException("Could not read all the data");
-            }
-            FileChannel.Position = prevPos;
-            uncompressedBuffer.Clear();
-            return uncompressedBuffer;
+            Disposables.DisposeQuietly(_data);
+            Disposables.DisposeQuietly(_mappedFile);
+            base.Dispose();
+        }
+
+        private MemoryStream Read(MemoryMappedViewStream data, long offset, int length)
+        {
+            var newPosition = data.Position + offset;
+            var newMs = data.Duplicate();
+            newMs.SetLength(newPosition + length);
+            newMs.Position = newPosition;
+            return newMs;
         }
     }
 }

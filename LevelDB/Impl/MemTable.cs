@@ -38,7 +38,7 @@ namespace LevelDB.Impl
             set => Interlocked.Exchange(ref _approximateMemoryUsage, value);
         }
 
-        private readonly ConcurrentDictionary<InternalKey, Slice> _table;
+        private readonly ConcurrentSortedDictionary<InternalKey, Slice> _table;
         private readonly InternalKeyComparator _internalKeyComparator;
 
         private long _approximateMemoryUsage;
@@ -46,7 +46,7 @@ namespace LevelDB.Impl
         public MemTable(InternalKeyComparator internalKeyComparator)
         {
             _internalKeyComparator = internalKeyComparator;
-            _table = new ConcurrentDictionary<InternalKey, Slice>(internalKeyComparator);
+            _table = new ConcurrentSortedDictionary<InternalKey, Slice>(internalKeyComparator);
         }
 
         public void Add(long sequenceNumber, ValueType valueType, Slice key, Slice value)
@@ -99,10 +99,10 @@ namespace LevelDB.Impl
         public class MemTableIterator : IInternalIterator
         {
             private IPeekingIterator<Entry<InternalKey, Slice>> iterator;
-            private ConcurrentDictionary<InternalKey, Slice> _internalTable;
+            private ConcurrentSortedDictionary<InternalKey, Slice> _internalTable;
             private readonly InternalKeyComparator _internalKeyComparator;
 
-            public MemTableIterator(ConcurrentDictionary<InternalKey, Slice> table,
+            public MemTableIterator(ConcurrentSortedDictionary<InternalKey, Slice> table,
                 InternalKeyComparator internalKeyComparator)
             {
                 _internalTable = table;

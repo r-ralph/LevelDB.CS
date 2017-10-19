@@ -17,10 +17,17 @@
 #endregion
 
 using System.Collections.Generic;
+using System.IO;
+using LevelDB.Util;
 
-namespace LevelDB.Impl
+namespace LevelDB.Table
 {
-    public interface ISeekingIterable<TK, TV> : IEnumerable<Entry<TK, TV>>
+    public class MMapTableTest : TableTest
     {
+        protected override Table CreateTable(string name, FileStream fileStream, IComparer<Slice> comparator,
+            bool verifyChecksums)
+        {
+            return new MMapTable(name, fileStream, comparator, verifyChecksums);
+        }
     }
 }

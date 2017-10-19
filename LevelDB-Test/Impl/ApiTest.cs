@@ -24,7 +24,7 @@ using Xunit;
 
 namespace LevelDB.Impl
 {
-    public class ApiTest: IDisposable
+    public class ApiTest : IDisposable
     {
         private readonly DBFactory _factory = DBFactory.Factory;
         private DirectoryInfo databaseDir;
@@ -54,7 +54,7 @@ namespace LevelDB.Impl
             return rc;
         }
 
-    [Fact]
+        [Fact]
         public void TestCompaction()
         {
             Options options = new Options().CreateIfMissing(true).CompressionType(CompressionType.None);
@@ -74,7 +74,6 @@ namespace LevelDB.Impl
             }
             using (var db = _factory.Open(path, options))
             {
-
                 Console.WriteLine("Deleting");
                 for (int i = 0; i < 1000 * 1000; i++)
                 {
@@ -84,11 +83,9 @@ namespace LevelDB.Impl
                     }
                     db.Delete(Bytes("key" + i));
                 }
-
             }
             using (var db = _factory.Open(path, options))
             {
-
                 Console.WriteLine("Adding");
                 for (int i = 0; i < 1000 * 1000; i++)
                 {
@@ -98,7 +95,6 @@ namespace LevelDB.Impl
                     }
                     db.Put(Bytes("key" + i), Bytes("value" + i));
                 }
-
             }
         }
     }

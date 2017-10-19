@@ -43,7 +43,7 @@ namespace LevelDB.Impl
                 if (tableAndFile != null)
                 {
                     var table = tableAndFile.Table;
-                    table.Closer().Invoke();
+                    table.Dispose();
                     //finalizer.addCleanup(table, table.closer()
                 }
             };
@@ -105,18 +105,17 @@ namespace LevelDB.Impl
             {
                 var tableFileName = Filename.TableFileName(fileNumber);
                 var tableFile = new FileInfo(Path.Combine(databaseDir.FullName, tableFileName));
-                FileChannel = tableFile.OpenWrite();
+                FileChannel = tableFile.Open(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
                 try
                 {
-                    //if (Iq80DBFactory.USE_MMAP)
-                    //{
-                    //    table = new MMapTable(tableFile.getAbsolutePath(), fileChannel, userComparator,
-                    //        verifyChecksums);
-                    //}
-                    //else
-                    //{
-                    Table = new FileChannelTable(tableFile.FullName, FileChannel, userComparator, verifyChecksums);
-                    //}
+                    if (DBFactory.UseMMap)
+                    {
+                        Table = new MMapTable(tableFile.FullName, FileChannel, userComparator, verifyChecksums);
+                    }
+                    else
+                    {
+                        Table = new FileChannelTable(tableFile.FullName, FileChannel, userComparator, verifyChecksums);
+                    }
                 }
                 catch
                     (IOException)

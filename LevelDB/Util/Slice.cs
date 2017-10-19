@@ -19,6 +19,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.IO.MemoryMappedFiles;
 using System.Text;
 using LevelDB.Guava;
 using LevelDB.Util.Extension;
@@ -256,6 +257,13 @@ namespace LevelDB.Util
             destination.Put(_data, index, Math.Min(Length, (int) destination.Remaining()));
         }
 
+        public void GetBytes(int index, MemoryMappedViewAccessor destination)
+        {
+            Preconditions.CheckPositionIndex(index, Length);
+            index += _offset;
+            destination.Put(_data, index, Math.Min(Length, (int) destination.Remaining()));
+        }
+
         /// <summary>
         /// Transfers this buffer's data to the specified stream starting at the specified absolute <code>index</code>.
         /// </summary>
@@ -474,7 +482,7 @@ namespace LevelDB.Util
                     }
                     break;
                 }
-                var localReadBytes = input.Read(_data, index, length);                
+                var localReadBytes = input.Read(_data, index, length);
                 readBytes += localReadBytes;
                 index += localReadBytes;
                 length -= localReadBytes;
@@ -586,7 +594,7 @@ namespace LevelDB.Util
         {
             Preconditions.CheckPositionIndexes(index, index + length, Length);
             index += _offset;
-			return new MemoryStream(_data, index, length);
+            return new MemoryStream(_data, index, length);
         }
 
         #region Override methods
@@ -687,7 +695,7 @@ namespace LevelDB.Util
 
         public string ToString(int index, int length, Encoding charset)
         {
-			return length == 0 ? "" : Slices.DecodeString(ToMemoryStream(index, length), charset);
+            return length == 0 ? "" : Slices.DecodeString(ToMemoryStream(index, length), charset);
         }
 
         public override string ToString()

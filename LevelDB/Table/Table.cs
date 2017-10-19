@@ -27,7 +27,7 @@ using LevelDB.Util.Extension;
 
 namespace LevelDB.Table
 {
-    public abstract class Table : ISeekingIterable<Slice, Slice>
+    public abstract class Table : ISeekingIterable<Slice, Slice>, IDisposable
     {
         protected static MemoryStream UncompressedScratch = new MemoryStream(4 * 1024 * 1024);
 
@@ -107,7 +107,10 @@ namespace LevelDB.Table
             return (int) VariableLengthQuantity.ReadVariableLengthInt(data.Duplicate());
         }
 
-        public Action Closer() => () => Disposables.DisposeQuietly(FileChannel);
+        public virtual void Dispose()
+        {
+            Disposables.DisposeQuietly(FileChannel);
+        }
 
         public override string ToString()
         {
