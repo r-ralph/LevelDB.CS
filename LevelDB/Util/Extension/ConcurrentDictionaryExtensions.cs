@@ -38,16 +38,14 @@ namespace LevelDB.Util.Extension
         public static TKey LowerKey<TKey, TValue>(this ConcurrentSortedDictionary<TKey, TValue> dictionary, TKey key,
             IComparer<TKey> comparer)
         {
-            List<TKey> list;
-            var indices = GetPossibleIndices(dictionary, key, comparer, true, out list);
+            var indices = GetPossibleIndices(dictionary, key, comparer, true, out var list);
             return indices.Item1 < 0 ? default(TKey) : list[indices.Item1];
         }
 
         public static KeyValuePair<TKey, TValue>? LowerEntry<TKey, TValue>(
             this ConcurrentSortedDictionary<TKey, TValue> dictionary, TKey key, IComparer<TKey> comparer)
         {
-            List<TKey> list;
-            var indices = GetPossibleIndices(dictionary, key, comparer, true, out list);
+            var indices = GetPossibleIndices(dictionary, key, comparer, true, out var list);
             if (indices.Item1 < 0)
                 return null;
 
@@ -58,16 +56,14 @@ namespace LevelDB.Util.Extension
         public static TKey FloorKey<TKey, TValue>(this ConcurrentSortedDictionary<TKey, TValue> dictionary, TKey key,
             IComparer<TKey> comparer)
         {
-            List<TKey> list;
-            var indices = GetPossibleIndices(dictionary, key, comparer, false, out list);
+            var indices = GetPossibleIndices(dictionary, key, comparer, false, out var list);
             return indices.Item1 < 0 ? default(TKey) : list[indices.Item1];
         }
 
         public static KeyValuePair<TKey, TValue>? FloorEntry<TKey, TValue>(
             this ConcurrentSortedDictionary<TKey, TValue> dictionary, TKey key, IComparer<TKey> comparer)
         {
-            List<TKey> list;
-            var indices = GetPossibleIndices(dictionary, key, comparer, false, out list);
+            var indices = GetPossibleIndices(dictionary, key, comparer, false, out var list);
             if (indices.Item1 < 0)
                 return null;
 
@@ -78,16 +74,14 @@ namespace LevelDB.Util.Extension
         public static TKey CeilingKey<TKey, TValue>(this ConcurrentSortedDictionary<TKey, TValue> dictionary, TKey key,
             IComparer<TKey> comparer)
         {
-            List<TKey> list;
-            var indices = GetPossibleIndices(dictionary, key, comparer, false, out list);
+            var indices = GetPossibleIndices(dictionary, key, comparer, false, out var list);
             return indices.Item2 == list.Count ? default(TKey) : list[indices.Item2];
         }
 
         public static KeyValuePair<TKey, TValue>? CeilingEntry<TKey, TValue>(
             this ConcurrentSortedDictionary<TKey, TValue> dictionary, TKey key, IComparer<TKey> comparer)
         {
-            List<TKey> list;
-            var indices = GetPossibleIndices(dictionary, key, comparer, false, out list);
+            var indices = GetPossibleIndices(dictionary, key, comparer, false, out var list);
             if (indices.Item2 == list.Count)
                 return null;
 
@@ -98,16 +92,14 @@ namespace LevelDB.Util.Extension
         public static TKey HigherKey<TKey, TValue>(this ConcurrentSortedDictionary<TKey, TValue> dictionary, TKey key,
             IComparer<TKey> comparer)
         {
-            List<TKey> list;
-            var indices = GetPossibleIndices(dictionary, key, comparer, true, out list);
+            var indices = GetPossibleIndices(dictionary, key, comparer, true, out var list);
             return indices.Item2 == list.Count ? default(TKey) : list[indices.Item2];
         }
 
         public static KeyValuePair<TKey, TValue>? HigherEntry<TKey, TValue>(
             this ConcurrentSortedDictionary<TKey, TValue> dictionary, TKey key, IComparer<TKey> comparer)
         {
-            List<TKey> list;
-            var indices = GetPossibleIndices(dictionary, key, comparer, true, out list);
+            var indices = GetPossibleIndices(dictionary, key, comparer, true, out var list);
             if (indices.Item2 == list.Count)
                 return null;
 

@@ -24,8 +24,7 @@ namespace LevelDB.Impl
 {
     public class DBFactory : IDBFactory<WriteBatchImpl>
     {
-        // TODO: use Environment.​Is64Bit​Process when update to .NET Standard 2.0
-        public static readonly bool UseMMap = bool.Parse(Environment.GetEnvironmentVariable("leveldb.mmap") ?? "true");
+        public static readonly bool UseMMap = bool.Parse(Environment.GetEnvironmentVariable("leveldb.mmap") ?? Environment.Is64BitProcess.ToString());
 
         public static readonly DBFactory Factory = new DBFactory();
 

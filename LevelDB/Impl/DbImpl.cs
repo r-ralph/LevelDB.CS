@@ -37,44 +37,44 @@ namespace LevelDB.Impl
 {
     public class DbImpl : DB<SeekingIteratorAdapter, WriteBatchImpl>
     {
-        private readonly Options options;
-        private readonly DirectoryInfo databaseDir;
-        private readonly TableCache tableCache;
-        private readonly DbLock dbLock;
-        private readonly VersionSet versions;
+        private readonly Options _options;
+        private readonly DirectoryInfo _databaseDir;
+        private readonly TableCache _tableCache;
+        private readonly DbLock _dbLock;
+        private readonly VersionSet _versions;
 
-        private readonly AtomicBoolean shuttingDown = new AtomicBoolean();
+        private readonly AtomicBoolean _shuttingDown = new AtomicBoolean();
 
-        private readonly ReentrantLock mutex = new ReentrantLock();
-        private readonly Condition backgroundCondition;
+        private readonly ReentrantLock _mutex = new ReentrantLock();
+        private readonly Condition _backgroundCondition;
 
-        private readonly IList<long> pendingOutputs = new List<long>(); // todo
+        private readonly IList<long> _pendingOutputs = new List<long>(); // todo
 
-        private ILogWriter log;
+        private ILogWriter _log;
 
-        private MemTable memTable;
-        private MemTable immutableMemTable;
+        private MemTable _memTable;
+        private MemTable _immutableMemTable;
 
-        private readonly InternalKeyComparator internalKeyComparator;
+        private readonly InternalKeyComparator _internalKeyComparator;
 
-        private volatile Exception backgroundException;
+        private volatile Exception _backgroundException;
 
         //private readonly ExecutorService compactionExecutor;
-        private Task backgroundCompaction;
+        private Task _backgroundCompaction;
 
-        private ManualCompaction manualCompaction;
+        private ManualCompaction _manualCompaction;
 
         public DbImpl(Options options, DirectoryInfo databaseDir)
         {
             Preconditions.CheckNotNull(options, $"{nameof(options)} is null");
             Preconditions.CheckNotNull(databaseDir, $"{nameof(databaseDir)} is null");
-            this.options = options;
-            this.databaseDir = databaseDir;
+            _options = options;
+            _databaseDir = databaseDir;
 
-            backgroundCondition = mutex.NewCondition();
+            _backgroundCondition = _mutex.NewCondition();
 
             //use custom comparator if set
-            IDBComparator comparator = options.Comparator();
+            var comparator = options.Comparator();
             IUserComparator userComparator;
             if (comparator != null)
             {
@@ -84,9 +84,9 @@ namespace LevelDB.Impl
             {
                 userComparator = new BytewiseComparator();
             }
-            internalKeyComparator = new InternalKeyComparator(userComparator);
-            memTable = new MemTable(internalKeyComparator);
-            immutableMemTable = null;
+            _internalKeyComparator = new InternalKeyComparator(userComparator);
+            _memTable = new MemTable(_internalKeyComparator);
+            _immutableMemTable = null;
             /*
             ThreadFactory compactionThreadFactory = new ThreadFactoryBuilder()
                 .setNameFormat("leveldb-compaction-%s")
@@ -108,8 +108,9 @@ namespace LevelDB.Impl
             */
 
             // Reserve ten files or so for other uses and give the rest to TableCache.
-            int tableCacheSize = options.MaxOpenFiles() - 10;
-            tableCache = new TableCache(databaseDir, tableCacheSize, new InternalUserComparator(internalKeyComparator),
+            var tableCacheSize = options.MaxOpenFiles() - 10;
+            _tableCache = new TableCache(databaseDir, tableCacheSize,
+                new InternalUserComparator(_internalKeyComparator),
                 options.VerifyChecksums());
 
             // create the version set
@@ -121,14 +122,14 @@ namespace LevelDB.Impl
             }
             Preconditions.CheckArgument(Directory.Exists(databaseDir.FullName),
                 $"Database directory '{databaseDir.FullName}' does not exist and could not be created");
-            mutex.Lock();
+            _mutex.Lock();
             try
             {
                 // lock the database dir
-                dbLock = new DbLock(new FileInfo(Path.Combine(databaseDir.FullName, Filename.LockFileName())));
+                _dbLock = new DbLock(new FileInfo(Path.Combine(databaseDir.FullName, Filename.LockFileName())));
 
                 // verify the "current" file
-                FileInfo currentFile = new FileInfo(Path.Combine(databaseDir.FullName, Filename.CurrentFileName()));
+                var currentFile = new FileInfo(Path.Combine(databaseDir.FullName, Filename.CurrentFileName()));
                 if (!currentFile.IsReadable())
                 {
                     Preconditions.CheckArgument(options.CreateIfMissing(),
@@ -140,10 +141,10 @@ namespace LevelDB.Impl
                         "Database '%s' exists and the error if exists option is enabled", databaseDir);
                 }
 
-                versions = new VersionSet(databaseDir, tableCache, internalKeyComparator);
+                _versions = new VersionSet(databaseDir, _tableCache, _internalKeyComparator);
 
                 // load (and recover) current version
-                versions.Recover();
+                _versions.Recover();
 
                 // Recover from all newer log files than the ones named in the
                 // descriptor (new log files may have been added by the previous
@@ -152,10 +153,10 @@ namespace LevelDB.Impl
                 // Note that PrevLogNumber() is no longer used, but we pay
                 // attention to it in case we are recovering a database
                 // produced by an older version of leveldb.
-                long minLogNumber = versions.LogNumber;
-                long previousLogNumber = versions.PrevLogNumber;
-                IList<FileInfo> filenames = Filename.ListFiles(databaseDir);
-                List<long> logs = (from filename in filenames
+                var minLogNumber = _versions.LogNumber;
+                var previousLogNumber = _versions.PrevLogNumber;
+                var filenames = Filename.ListFiles(databaseDir);
+                var logs = (from filename in filenames
                         select Filename.ParseFileName(filename)
                         into fileInfo
                         where fileInfo != null && fileInfo.FileType == Filename.FileType.Log &&
@@ -164,26 +165,26 @@ namespace LevelDB.Impl
                     .ToList();
 
                 // Recover in the order in which the logs were generated
-                VersionEdit edit = new VersionEdit();
+                var edit = new VersionEdit();
                 logs.Sort();
-                foreach (long fileNumber in logs)
+                foreach (var fileNumber in logs)
                 {
-                    long maxSequence = RecoverLogFile(fileNumber, edit);
-                    if (versions.LastSequence < maxSequence)
+                    var maxSequence = RecoverLogFile(fileNumber, edit);
+                    if (_versions.LastSequence < maxSequence)
                     {
-                        versions.LastSequence = maxSequence;
+                        _versions.LastSequence = maxSequence;
                     }
                 }
 
                 // open transaction log
-                long logFileNumber = versions.NextFileNumber;
-                log = Logs.CreateLogWriter(
+                var logFileNumber = _versions.NextFileNumber;
+                _log = Logs.CreateLogWriter(
                     new FileInfo(Path.Combine(databaseDir.FullName, Filename.LogFileName(logFileNumber))),
                     logFileNumber);
-                edit.LogNumber = log.FileNumber;
+                edit.LogNumber = _log.FileNumber;
 
                 // apply recovered edits
-                versions.LogAndApply(edit);
+                _versions.LogAndApply(edit);
 
                 // cleanup unused files
                 DeleteObsoleteFiles();
@@ -193,28 +194,28 @@ namespace LevelDB.Impl
             }
             finally
             {
-                mutex.Unlock();
+                _mutex.Unlock();
             }
         }
 
         public void Dispose()
         {
-            if (shuttingDown.GetAndSet(true))
+            if (_shuttingDown.GetAndSet(true))
             {
                 return;
             }
 
-            mutex.Lock();
+            _mutex.Lock();
             try
             {
-                while (backgroundCompaction != null)
+                while (_backgroundCompaction != null)
                 {
-                    backgroundCondition.AwaitUninterruptibly();
+                    _backgroundCondition.AwaitUninterruptibly();
                 }
             }
             finally
             {
-                mutex.Unlock();
+                _mutex.Unlock();
             }
 
             /*
@@ -230,20 +231,20 @@ namespace LevelDB.Impl
             */
             try
             {
-                versions.Destroy();
+                _versions.Destroy();
             }
-            catch (IOException ignored)
+            catch (IOException)
             {
             }
             try
             {
-                log.Close();
+                _log.Close();
             }
-            catch (IOException ignored)
+            catch (IOException)
             {
             }
-            tableCache.Close();
-            dbLock.Release();
+            _tableCache.Close();
+            _dbLock.Release();
         }
 
         public string GetProperty(string name)
@@ -254,34 +255,34 @@ namespace LevelDB.Impl
 
         private void DeleteObsoleteFiles()
         {
-            Preconditions.CheckState(mutex.IsHeldByCurrentThread());
+            Preconditions.CheckState(_mutex.IsHeldByCurrentThread());
 
             // Make a set of all of the live files
-            List<long> live = new List<long>(pendingOutputs);
-            foreach (FileMetaData fileMetaData in versions.GetLiveFiles())
+            var live = new List<long>(_pendingOutputs);
+            foreach (var fileMetaData in _versions.GetLiveFiles())
             {
                 live.Add(fileMetaData.Number);
             }
 
-            foreach (FileInfo file in Filename.ListFiles(databaseDir))
+            foreach (var file in Filename.ListFiles(_databaseDir))
             {
                 var fileInfo = Filename.ParseFileName(file);
                 if (fileInfo == null)
                 {
                     continue;
                 }
-                long number = fileInfo.FileNumber;
-                bool keep = true;
+                var number = fileInfo.FileNumber;
+                var keep = true;
                 switch (fileInfo.FileType)
                 {
                     case Filename.FileType.Log:
-                        keep = ((number >= versions.LogNumber) ||
-                                (number == versions.PrevLogNumber));
+                        keep = ((number >= _versions.LogNumber) ||
+                                (number == _versions.PrevLogNumber));
                         break;
                     case Filename.FileType.Descriptor:
                         // Keep my manifest file, and any newer incarnations'
                         // (in case there is a race that allows other incarnations)
-                        keep = (number >= versions.ManifestFileNumber);
+                        keep = (number >= _versions.ManifestFileNumber);
                         break;
                     case Filename.FileType.Table:
                         keep = live.Contains(number);
@@ -303,7 +304,7 @@ namespace LevelDB.Impl
                 {
                     if (fileInfo.FileType == Filename.FileType.Table)
                     {
-                        tableCache.Evict(number);
+                        _tableCache.Evict(number);
                     }
                     // todo info logging system needed
                     // Log(options_.info_log, "Delete type=%d #%lld\n",
@@ -316,21 +317,21 @@ namespace LevelDB.Impl
 
         public void FlushMemTable()
         {
-            mutex.Lock();
+            _mutex.Lock();
             try
             {
                 // force compaction
                 MakeRoomForWrite(true);
 
                 // todo bg_error code
-                while (immutableMemTable != null)
+                while (_immutableMemTable != null)
                 {
-                    backgroundCondition.AwaitUninterruptibly();
+                    _backgroundCondition.AwaitUninterruptibly();
                 }
             }
             finally
             {
-                mutex.Unlock();
+                _mutex.Unlock();
             }
         }
 
@@ -342,50 +343,50 @@ namespace LevelDB.Impl
             Preconditions.CheckNotNull(start, "start is null");
             Preconditions.CheckNotNull(end, "end is null");
 
-            mutex.Lock();
+            _mutex.Lock();
             try
             {
-                while (this.manualCompaction != null)
+                while (_manualCompaction != null)
                 {
-                    backgroundCondition.AwaitUninterruptibly();
+                    _backgroundCondition.AwaitUninterruptibly();
                 }
-                ManualCompaction manualCompaction = new ManualCompaction(level, start, end);
-                this.manualCompaction = manualCompaction;
+                var manualCompaction = new ManualCompaction(level, start, end);
+                _manualCompaction = manualCompaction;
 
                 MaybeScheduleCompaction();
 
-                while (this.manualCompaction == manualCompaction)
+                while (_manualCompaction == manualCompaction)
                 {
-                    backgroundCondition.AwaitUninterruptibly();
+                    _backgroundCondition.AwaitUninterruptibly();
                 }
             }
             finally
             {
-                mutex.Unlock();
+                _mutex.Unlock();
             }
         }
 
         private void MaybeScheduleCompaction()
         {
-            Preconditions.CheckState(mutex.IsHeldByCurrentThread());
+            Preconditions.CheckState(_mutex.IsHeldByCurrentThread());
 
-            if (backgroundCompaction != null)
+            if (_backgroundCompaction != null)
             {
                 // Already scheduled
             }
-            else if (shuttingDown.Value)
+            else if (_shuttingDown.Value)
             {
                 // DB is being shutdown; no more background compactions
             }
-            else if (immutableMemTable == null &&
-                     manualCompaction == null &&
-                     !versions.NeedsCompaction())
+            else if (_immutableMemTable == null &&
+                     _manualCompaction == null &&
+                     !_versions.NeedsCompaction())
             {
                 // No work to be done
             }
             else
             {
-                backgroundCompaction = Task.Factory.StartNew(() =>
+                _backgroundCompaction = Task.Factory.StartNew(() =>
                 {
                     try
                     {
@@ -396,7 +397,7 @@ namespace LevelDB.Impl
                     }
                     catch (Exception e)
                     {
-                        backgroundException = e;
+                        _backgroundException = e;
                     }
                 });
             }
@@ -404,7 +405,7 @@ namespace LevelDB.Impl
 
         public void CheckBackgroundException()
         {
-            var e = backgroundException;
+            var e = _backgroundException;
             if (e != null)
             {
                 throw new BackgroundProcessingException(e);
@@ -413,24 +414,24 @@ namespace LevelDB.Impl
 
         private void BackgroundCall()
         {
-            mutex.Lock();
+            _mutex.Lock();
             try
             {
-                if (backgroundCompaction == null)
+                if (_backgroundCompaction == null)
                 {
                     return;
                 }
 
                 try
                 {
-                    if (!shuttingDown.Value)
+                    if (!_shuttingDown.Value)
                     {
                         BackgroundCompaction();
                     }
                 }
                 finally
                 {
-                    backgroundCompaction = null;
+                    _backgroundCompaction = null;
                 }
             }
             finally
@@ -445,11 +446,11 @@ namespace LevelDB.Impl
                 {
                     try
                     {
-                        backgroundCondition.SignalAll();
+                        _backgroundCondition.SignalAll();
                     }
                     finally
                     {
-                        mutex.Unlock();
+                        _mutex.Unlock();
                     }
                 }
             }
@@ -457,114 +458,111 @@ namespace LevelDB.Impl
 
         private void BackgroundCompaction()
         {
-            Preconditions.CheckState(mutex.IsHeldByCurrentThread());
+            Preconditions.CheckState(_mutex.IsHeldByCurrentThread());
 
             CompactMemTableInternal();
 
             Compaction compaction;
-            if (manualCompaction != null)
+            if (_manualCompaction != null)
             {
-                compaction = versions.CompactRange(manualCompaction.Level,
-                    new InternalKey(manualCompaction.Begin, MaxSequenceNumber, Value),
-                    new InternalKey(manualCompaction.End, 0, Deletion));
+                compaction = _versions.CompactRange(_manualCompaction.Level,
+                    new InternalKey(_manualCompaction.Begin, MaxSequenceNumber, Value),
+                    new InternalKey(_manualCompaction.End, 0, Deletion));
             }
             else
             {
-                compaction = versions.PickCompaction();
+                compaction = _versions.PickCompaction();
             }
 
             if (compaction == null)
             {
                 // no compaction
             }
-            else if (manualCompaction == null && compaction.IsTrivialMove())
+            else if (_manualCompaction == null && compaction.IsTrivialMove())
             {
                 // Move file to next level
                 Preconditions.CheckState(compaction.LevelInputs.Count == 1);
-                FileMetaData fileMetaData = compaction.LevelInputs[0];
+                var fileMetaData = compaction.LevelInputs[0];
                 compaction.Edit.DeleteFile(compaction.Level, fileMetaData.Number);
                 compaction.Edit.AddFile(compaction.Level + 1, fileMetaData);
-                versions.LogAndApply(compaction.Edit);
+                _versions.LogAndApply(compaction.Edit);
                 // log
             }
             else
             {
-                CompactionState compactionState = new CompactionState(compaction);
+                var compactionState = new CompactionState(compaction);
                 DoCompactionWork(compactionState);
                 CleanupCompaction(compactionState);
             }
 
             // manual compaction complete
-            if (manualCompaction != null)
-            {
-                manualCompaction = null;
-            }
+            _manualCompaction = null;
         }
 
         private void CleanupCompaction(CompactionState compactionState)
         {
-            Preconditions.CheckState(mutex.IsHeldByCurrentThread());
+            Preconditions.CheckState(_mutex.IsHeldByCurrentThread());
 
-            if (compactionState.builder != null)
+            if (compactionState.Builder != null)
             {
-                compactionState.builder.Abandon();
+                compactionState.Builder.Abandon();
             }
             else
             {
-                Preconditions.CheckArgument(compactionState.outfile == null);
+                Preconditions.CheckArgument(compactionState.Outfile == null);
             }
 
-            foreach (FileMetaData output in compactionState.outputs)
+            foreach (var output in compactionState.Outputs)
             {
-                pendingOutputs.Remove(output.Number);
+                _pendingOutputs.Remove(output.Number);
             }
         }
 
         private long RecoverLogFile(long fileNumber, VersionEdit edit)
         {
-            Preconditions.CheckState(mutex.IsHeldByCurrentThread());
-            FileInfo file = new FileInfo(Path.Combine(databaseDir.FullName, Filename.LogFileName(fileNumber)));
+            Preconditions.CheckState(_mutex.IsHeldByCurrentThread());
+            var file = new FileInfo(Path.Combine(_databaseDir.FullName, Filename.LogFileName(fileNumber)));
             using (var stream = file.Open(FileMode.OpenOrCreate))
             {
-                LogMonitor logMonitor = LogMonitors.LogMonitor();
-                LogReader logReader = new LogReader(stream, logMonitor, true, 0);
+                var logMonitor = LogMonitors.LogMonitor();
+                var logReader = new LogReader(stream, logMonitor, true, 0);
 
                 // Log(options_.info_log, "Recovering log #%llu", (unsigned long long) log_number);
 
                 // Read all the records and add to a memtable
                 long maxSequence = 0;
                 MemTable memTable = null;
-                for (Slice record = logReader.ReadRecord(); record != null; record = logReader.ReadRecord())
+                for (var record = logReader.ReadRecord(); record != null; record = logReader.ReadRecord())
                 {
-                    SliceInput sliceInput = record.Input();
+                    var sliceInput = record.Input();
                     // read header
                     if (sliceInput.Available < 12)
                     {
                         logMonitor.Corruption(sliceInput.Available, "log record too small");
                         continue;
                     }
-                    long sequenceBegin = sliceInput.ReadLong();
-                    int updateSize = sliceInput.ReadInt();
+                    var sequenceBegin = sliceInput.ReadLong();
+                    var updateSize = sliceInput.ReadInt();
 
                     // read entries
-                    WriteBatchImpl writeBatch = ReadWriteBatch(sliceInput, updateSize);
+                    var writeBatch = ReadWriteBatch(sliceInput, updateSize);
 
                     // apply entries to memTable
                     if (memTable == null)
                     {
-                        memTable = new MemTable(internalKeyComparator);
+                        memTable = new MemTable(_internalKeyComparator);
                     }
                     writeBatch.ForEach(new InsertIntoHandler(memTable, sequenceBegin));
 
                     // update the maxSequence
-                    long lastSequence = sequenceBegin + updateSize - 1;
+                    var lastSequence = sequenceBegin + updateSize - 1;
                     if (lastSequence > maxSequence)
                     {
                         maxSequence = lastSequence;
                     }
 
                     // flush mem table if necessary
-                    if (memTable.ApproximateMemoryUsage > options.WriteBufferSize())
+                    if (memTable.ApproximateMemoryUsage > _options.WriteBufferSize())
                     {
                         WriteLevel0Table(memTable, edit, null);
                         memTable = null;
@@ -590,55 +588,55 @@ namespace LevelDB.Impl
         {
             CheckBackgroundException();
             LookupKey lookupKey;
-            mutex.Lock();
+            _mutex.Lock();
             LookupResult lookupResult;
             try
             {
-                SnapshotImpl snapshot = GetSnapshot(options);
+                var snapshot = GetSnapshot(options);
                 lookupKey = new LookupKey(WrappedBuffer(key), snapshot.GetLastSequence());
 
                 // First look in the memtable, then in the immutable memtable (if any).
-                lookupResult = memTable.Get(lookupKey);
+                lookupResult = _memTable.Get(lookupKey);
                 if (lookupResult != null)
                 {
-                    Slice value = lookupResult.Value;
+                    var value = lookupResult.Value;
                     return value?.GetBytes();
                 }
-                if (immutableMemTable != null)
+                if (_immutableMemTable != null)
                 {
-                    lookupResult = immutableMemTable.Get(lookupKey);
+                    lookupResult = _immutableMemTable.Get(lookupKey);
                     if (lookupResult != null)
                     {
-                        Slice value = lookupResult.Value;
+                        var value = lookupResult.Value;
                         return value?.GetBytes();
                     }
                 }
             }
             finally
             {
-                mutex.Unlock();
+                _mutex.Unlock();
             }
 
             // Not in memTables; try live files in level order
-            lookupResult = versions.Get(lookupKey);
+            lookupResult = _versions.Get(lookupKey);
 
             // schedule compaction if necessary
-            mutex.Lock();
+            _mutex.Lock();
             try
             {
-                if (versions.NeedsCompaction())
+                if (_versions.NeedsCompaction())
                 {
                     MaybeScheduleCompaction();
                 }
             }
             finally
             {
-                mutex.Unlock();
+                _mutex.Unlock();
             }
 
             if (lookupResult != null)
             {
-                Slice value = lookupResult.Value;
+                var value = lookupResult.Value;
                 if (value != null)
                 {
                     return value.GetBytes();
@@ -680,7 +678,7 @@ namespace LevelDB.Impl
         public ISnapshot WriteInternal(WriteBatchImpl updates, WriteOptions options)
         {
             CheckBackgroundException();
-            mutex.Lock();
+            _mutex.Lock();
             try
             {
                 long sequenceEnd;
@@ -689,29 +687,29 @@ namespace LevelDB.Impl
                     MakeRoomForWrite(false);
 
                     // Get sequence numbers for this change set
-                    long sequenceBegin = versions.LastSequence + 1;
+                    var sequenceBegin = _versions.LastSequence + 1;
                     sequenceEnd = sequenceBegin + updates.Size - 1;
 
                     // Reserve this sequence in the version set
-                    versions.LastSequence = sequenceEnd;
+                    _versions.LastSequence = sequenceEnd;
 
                     // Log write
-                    Slice record = WriteWriteBatch(updates, sequenceBegin);
-                    log.AddRecord(record, options.Sync());
+                    var record = WriteWriteBatch(updates, sequenceBegin);
+                    _log.AddRecord(record, options.Sync());
 
                     // Update memtable
-                    updates.ForEach(new InsertIntoHandler(memTable, sequenceBegin));
+                    updates.ForEach(new InsertIntoHandler(_memTable, sequenceBegin));
                 }
                 else
                 {
-                    sequenceEnd = versions.LastSequence;
+                    sequenceEnd = _versions.LastSequence;
                 }
 
-                return options.Snapshot() ? new SnapshotImpl(versions.Current, sequenceEnd) : null;
+                return options.Snapshot() ? new SnapshotImpl(_versions.Current, sequenceEnd) : null;
             }
             finally
             {
-                mutex.Unlock();
+                _mutex.Unlock();
             }
         }
 
@@ -739,60 +737,60 @@ namespace LevelDB.Impl
         public SeekingIteratorAdapter GetEnumerator(ReadOptions options)
         {
             CheckBackgroundException();
-            mutex.Lock();
+            _mutex.Lock();
             try
             {
                 var rawIterator = InternalIterator();
 
                 // filter any entries not visible in our snapshot
-                SnapshotImpl snapshot = GetSnapshot(options);
-                SnapshotSeekingIterator snapshotIterator =
-                    new SnapshotSeekingIterator(rawIterator, snapshot, internalKeyComparator.UserComparator);
+                var snapshot = GetSnapshot(options);
+                var snapshotIterator =
+                    new SnapshotSeekingIterator(rawIterator, snapshot, _internalKeyComparator.UserComparator);
                 return new SeekingIteratorAdapter(snapshotIterator);
             }
             finally
             {
-                mutex.Unlock();
+                _mutex.Unlock();
             }
         }
 
-        ISeekingIterable<InternalKey, Slice> InternalIterable()
+        public ISeekingIterable<InternalKey, Slice> InternalIterable()
         {
             return new InternalSeekingIterable(this);
         }
 
-        DbIterator InternalIterator()
+        private DbIterator InternalIterator()
         {
-            mutex.Lock();
+            _mutex.Lock();
             try
             {
                 // merge together the memTable, immutableMemTable, and tables in version set
                 MemTable.MemTableIterator iterator = null;
-                if (immutableMemTable != null)
+                if (_immutableMemTable != null)
                 {
-                    iterator = immutableMemTable.GetMemTableIterator();
+                    iterator = _immutableMemTable.GetMemTableIterator();
                 }
-                Version current = versions.Current;
-                return new DbIterator(memTable.GetMemTableIterator(), iterator, current.GetLevel0Files(),
-                    current.GetLevelIterators(), internalKeyComparator);
+                var current = _versions.Current;
+                return new DbIterator(_memTable.GetMemTableIterator(), iterator, current.GetLevel0Files(),
+                    current.GetLevelIterators(), _internalKeyComparator);
             }
             finally
             {
-                mutex.Unlock();
+                _mutex.Unlock();
             }
         }
 
         public ISnapshot GetSnapshot()
         {
             CheckBackgroundException();
-            mutex.Lock();
+            _mutex.Lock();
             try
             {
-                return new SnapshotImpl(versions.Current, versions.LastSequence);
+                return new SnapshotImpl(_versions.Current, _versions.LastSequence);
             }
             finally
             {
-                mutex.Unlock();
+                _mutex.Unlock();
             }
         }
 
@@ -805,7 +803,7 @@ namespace LevelDB.Impl
             }
             else
             {
-                snapshot = new SnapshotImpl(versions.Current, versions.LastSequence);
+                snapshot = new SnapshotImpl(_versions.Current, _versions.LastSequence);
                 snapshot.Dispose(); // To avoid holding the snapshot active..
             }
             return snapshot;
@@ -813,9 +811,9 @@ namespace LevelDB.Impl
 
         private void MakeRoomForWrite(bool force)
         {
-            Preconditions.CheckState(mutex.IsHeldByCurrentThread());
+            Preconditions.CheckState(_mutex.IsHeldByCurrentThread());
 
-            bool allowDelay = !force;
+            var allowDelay = !force;
 
             while (true)
             {
@@ -825,7 +823,7 @@ namespace LevelDB.Impl
 //              s = bg_error_;
 //              break;
 //            } else
-                if (allowDelay && versions.NumberOfFilesInLevel(0) > DbConstants.L0SlowdownWritesTrigger)
+                if (allowDelay && _versions.NumberOfFilesInLevel(0) > DbConstants.L0SlowdownWritesTrigger)
                 {
                     // We are getting close to hitting a hard limit on the number of
                     // L0 files.  Rather than delaying a single write by several
@@ -835,72 +833,72 @@ namespace LevelDB.Impl
                     // case it is sharing the same core as the writer.
                     try
                     {
-                        mutex.Unlock();
+                        _mutex.Unlock();
                         //Thread.sleep(1);
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
                         //    Thread.currentThread().interrupt();
                         //    throw new RuntimeException(e);
                     }
                     finally
                     {
-                        mutex.Lock();
+                        _mutex.Lock();
                     }
 
                     // Do not delay a single write more than once
                     allowDelay = false;
                 }
-                else if (!force && memTable.ApproximateMemoryUsage <= options.WriteBufferSize())
+                else if (!force && _memTable.ApproximateMemoryUsage <= _options.WriteBufferSize())
                 {
                     // There is room in current memtable
                     break;
                 }
-                else if (immutableMemTable != null)
+                else if (_immutableMemTable != null)
                 {
                     // We have filled up the current memtable, but the previous
                     // one is still being compacted, so we wait.
-                    backgroundCondition.AwaitUninterruptibly();
+                    _backgroundCondition.AwaitUninterruptibly();
                 }
-                else if (versions.NumberOfFilesInLevel(0) >= DbConstants.L0StopWritesTrigger)
+                else if (_versions.NumberOfFilesInLevel(0) >= DbConstants.L0StopWritesTrigger)
                 {
                     // There are too many level-0 files.
 //                Log(options_.info_log, "waiting...\n");
-                    backgroundCondition.AwaitUninterruptibly();
+                    _backgroundCondition.AwaitUninterruptibly();
                 }
                 else
                 {
                     // Attempt to switch to a new memtable and trigger compaction of old
-                    Preconditions.CheckState(versions.PrevLogNumber == 0);
+                    Preconditions.CheckState(_versions.PrevLogNumber == 0);
 
                     // close the existing log
                     try
                     {
-                        log.Close();
+                        _log.Close();
                     }
                     catch (IOException e)
                     {
-                        throw new Exception($"Unable to close log file {log.File}", e);
+                        throw new Exception($"Unable to close log file {_log.File}", e);
                     }
 
                     // open a new log
-                    long logNumber = versions.NextFileNumber;
+                    var logNumber = _versions.NextFileNumber;
                     try
                     {
-                        log = Logs.CreateLogWriter(
-                            new FileInfo(Path.Combine(databaseDir.FullName, Filename.LogFileName(logNumber))),
+                        _log = Logs.CreateLogWriter(
+                            new FileInfo(Path.Combine(_databaseDir.FullName, Filename.LogFileName(logNumber))),
                             logNumber);
                     }
                     catch (IOException e)
                     {
                         throw new Exception("Unable to open new log file " +
-                                            new FileInfo(Path.Combine(databaseDir.FullName,
+                                            new FileInfo(Path.Combine(_databaseDir.FullName,
                                                 Filename.LogFileName(logNumber))).FullName, e);
                     }
 
                     // create a new mem table
-                    immutableMemTable = memTable;
-                    memTable = new MemTable(internalKeyComparator);
+                    _immutableMemTable = _memTable;
+                    _memTable = new MemTable(_internalKeyComparator);
 
                     // Do not force another compaction there is space available
                     force = false;
@@ -912,21 +910,21 @@ namespace LevelDB.Impl
 
         public void CompactMemTable()
         {
-            mutex.Lock();
+            _mutex.Lock();
             try
             {
                 CompactMemTableInternal();
             }
             finally
             {
-                mutex.Unlock();
+                _mutex.Unlock();
             }
         }
 
         private void CompactMemTableInternal()
         {
-            Preconditions.CheckState(mutex.IsHeldByCurrentThread());
-            if (immutableMemTable == null)
+            Preconditions.CheckState(_mutex.IsHeldByCurrentThread());
+            if (_immutableMemTable == null)
             {
                 return;
             }
@@ -934,34 +932,34 @@ namespace LevelDB.Impl
             try
             {
                 // Save the contents of the memtable as a new Table
-                VersionEdit edit = new VersionEdit();
-                Version baseVersion = versions.Current;
-                WriteLevel0Table(immutableMemTable, edit, baseVersion);
+                var edit = new VersionEdit();
+                var baseVersion = _versions.Current;
+                WriteLevel0Table(_immutableMemTable, edit, baseVersion);
 
-                if (shuttingDown.Value)
+                if (_shuttingDown.Value)
                 {
                     throw new Exception("Database shutdown during memtable compaction");
                 }
 
                 // Replace immutable memtable with the generated Table
                 edit.PreviousLogNumber = 0;
-                edit.LogNumber = (log.FileNumber); // Earlier logs no longer needed
-                versions.LogAndApply(edit);
+                edit.LogNumber = (_log.FileNumber); // Earlier logs no longer needed
+                _versions.LogAndApply(edit);
 
-                immutableMemTable = null;
+                _immutableMemTable = null;
 
                 DeleteObsoleteFiles();
             }
             finally
             {
-                backgroundCondition.SignalAll();
+                _backgroundCondition.SignalAll();
             }
         }
 
 
         private void WriteLevel0Table(MemTable mem, VersionEdit edit, Version baseVersion)
         {
-            Preconditions.CheckState(mutex.IsHeldByCurrentThread());
+            Preconditions.CheckState(_mutex.IsHeldByCurrentThread());
 
             // skip empty mem table
             if (mem.IsEmpty)
@@ -970,9 +968,9 @@ namespace LevelDB.Impl
             }
 
             // write the memtable to a new sstable
-            long fileNumber = versions.NextFileNumber;
-            pendingOutputs.Add(fileNumber);
-            mutex.Unlock();
+            var fileNumber = _versions.NextFileNumber;
+            _pendingOutputs.Add(fileNumber);
+            _mutex.Unlock();
             FileMetaData meta;
             try
             {
@@ -980,17 +978,17 @@ namespace LevelDB.Impl
             }
             finally
             {
-                mutex.Lock();
+                _mutex.Lock();
             }
-            pendingOutputs.Remove(fileNumber);
+            _pendingOutputs.Remove(fileNumber);
 
             // Note that if file size is zero, the file has been deleted and
             // should not be added to the manifest.
-            int level = 0;
+            var level = 0;
             if (meta != null && meta.FileSize > 0)
             {
-                Slice minUserKey = meta.Smallest.UserKey;
-                Slice maxUserKey = meta.Largest.UserKey;
+                var minUserKey = meta.Smallest.UserKey;
+                var maxUserKey = meta.Largest.UserKey;
                 if (baseVersion != null)
                 {
                     level = baseVersion.PickLevelForMemTableOutput(minUserKey, maxUserKey);
@@ -1001,7 +999,7 @@ namespace LevelDB.Impl
 
         private FileMetaData BuildTable(MemTable data, long fileNumber)
         {
-            var file = new FileInfo(Path.Combine(databaseDir.FullName, Filename.TableFileName(fileNumber)));
+            var file = new FileInfo(Path.Combine(_databaseDir.FullName, Filename.TableFileName(fileNumber)));
             try
             {
                 InternalKey smallest = null;
@@ -1009,14 +1007,14 @@ namespace LevelDB.Impl
                 var channel = file.Open(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
                 try
                 {
-                    TableBuilder tableBuilder =
-                        new TableBuilder(options, channel, new InternalUserComparator(internalKeyComparator));
+                    var tableBuilder =
+                        new TableBuilder(_options, channel, new InternalUserComparator(_internalKeyComparator));
                     var memTableIterator = data.GetMemTableIterator();
-                    while(memTableIterator.HasNext())
+                    while (memTableIterator.HasNext())
                     {
                         var entry = memTableIterator.Next();
                         // update keys
-                        InternalKey key = entry.Key;
+                        var key = entry.Key;
                         if (smallest == null)
                         {
                             smallest = key;
@@ -1044,63 +1042,63 @@ namespace LevelDB.Impl
                 {
                     return null;
                 }
-                FileMetaData fileMetaData = new FileMetaData(fileNumber, file.Length, smallest, largest);
+                var fileMetaData = new FileMetaData(fileNumber, file.Length, smallest, largest);
 
                 // verify table can be opened
-                tableCache.NewIterator(fileMetaData);
+                _tableCache.NewIterator(fileMetaData);
 
-                pendingOutputs.Remove(fileNumber);
+                _pendingOutputs.Remove(fileNumber);
 
                 return fileMetaData;
             }
-            catch (IOException e)
+            catch (IOException)
             {
                 file.Delete();
-                throw e;
+                throw;
             }
         }
 
         private void DoCompactionWork(CompactionState compactionState)
         {
-            Preconditions.CheckState(mutex.IsHeldByCurrentThread());
-            Preconditions.CheckArgument(versions.NumberOfBytesInLevel(compactionState.Compaction.Level) > 0);
-            Preconditions.CheckArgument(compactionState.builder == null);
-            Preconditions.CheckArgument(compactionState.outfile == null);
+            Preconditions.CheckState(_mutex.IsHeldByCurrentThread());
+            Preconditions.CheckArgument(_versions.NumberOfBytesInLevel(compactionState.Compaction.Level) > 0);
+            Preconditions.CheckArgument(compactionState.Builder == null);
+            Preconditions.CheckArgument(compactionState.Outfile == null);
 
             // todo track snapshots
-            compactionState.smallestSnapshot = versions.LastSequence;
+            compactionState.SmallestSnapshot = _versions.LastSequence;
 
             // Release mutex while we're actually doing the compaction work
-            mutex.Unlock();
+            _mutex.Unlock();
             try
             {
-                MergingIterator iterator = versions.MakeInputIterator(compactionState.Compaction);
+                var iterator = _versions.MakeInputIterator(compactionState.Compaction);
 
                 Slice currentUserKey = null;
-                bool hasCurrentUserKey = false;
+                var hasCurrentUserKey = false;
 
-                long lastSequenceForKey = MaxSequenceNumber;
-                while (iterator.HasNext() && !shuttingDown.Value)
+                var lastSequenceForKey = MaxSequenceNumber;
+                while (iterator.HasNext() && !_shuttingDown.Value)
                 {
                     // always give priority to compacting the current mem table
-                    mutex.Lock();
+                    _mutex.Lock();
                     try
                     {
                         CompactMemTableInternal();
                     }
                     finally
                     {
-                        mutex.Unlock();
+                        _mutex.Unlock();
                     }
 
-                    InternalKey key = iterator.Peek().Key;
-                    if (compactionState.Compaction.ShouldStopBefore(key) && compactionState.builder != null)
+                    var key = iterator.Peek().Key;
+                    if (compactionState.Compaction.ShouldStopBefore(key) && compactionState.Builder != null)
                     {
                         FinishCompactionOutputFile(compactionState);
                     }
 
                     // Handle key/value, add to state, etc.
-                    bool drop = false;
+                    var drop = false;
                     // todo if key doesn't parse (it is corrupted),
                     if (false /*!ParseInternalKey(key, &ikey)*/)
                     {
@@ -1111,7 +1109,7 @@ namespace LevelDB.Impl
                     }
                     else
                     {
-                        if (!hasCurrentUserKey || internalKeyComparator.UserComparator
+                        if (!hasCurrentUserKey || _internalKeyComparator.UserComparator
                                 .Compare(key.UserKey, currentUserKey) != 0)
                         {
                             // First occurrence of this user key
@@ -1120,13 +1118,13 @@ namespace LevelDB.Impl
                             lastSequenceForKey = MaxSequenceNumber;
                         }
 
-                        if (lastSequenceForKey <= compactionState.smallestSnapshot)
+                        if (lastSequenceForKey <= compactionState.SmallestSnapshot)
                         {
                             // Hidden by an newer entry for same user key
                             drop = true; // (A)
                         }
                         else if (key.ValueType == Deletion &&
-                                 key.SequenceNumber <= compactionState.smallestSnapshot &&
+                                 key.SequenceNumber <= compactionState.SmallestSnapshot &&
                                  compactionState.Compaction.IsBaseLevelForKey(key.UserKey))
                         {
                             // For this user key:
@@ -1145,19 +1143,19 @@ namespace LevelDB.Impl
                     if (!drop)
                     {
                         // Open output file if necessary
-                        if (compactionState.builder == null)
+                        if (compactionState.Builder == null)
                         {
                             OpenCompactionOutputFile(compactionState);
                         }
-                        if (compactionState.builder.GetEntryCount() == 0)
+                        if (compactionState.Builder.GetEntryCount() == 0)
                         {
-                            compactionState.currentSmallest = key;
+                            compactionState.CurrentSmallest = key;
                         }
-                        compactionState.currentLargest = key;
-                        compactionState.builder.Add(key.Encode(), iterator.Peek().Value);
+                        compactionState.CurrentLargest = key;
+                        compactionState.Builder.Add(key.Encode(), iterator.Peek().Value);
 
                         // Close output file if it is big enough
-                        if (compactionState.builder.GetFileSize() >=
+                        if (compactionState.Builder.GetFileSize() >=
                             compactionState.Compaction.MaxOutputFileSize)
                         {
                             FinishCompactionOutputFile(compactionState);
@@ -1166,103 +1164,103 @@ namespace LevelDB.Impl
                     iterator.Next();
                 }
 
-                if (shuttingDown.Value)
+                if (_shuttingDown.Value)
                 {
                     throw new Exception("DB shutdown during compaction");
                 }
-                if (compactionState.builder != null)
+                if (compactionState.Builder != null)
                 {
                     FinishCompactionOutputFile(compactionState);
                 }
             }
             finally
             {
-                mutex.Lock();
+                _mutex.Lock();
             }
 
             // todo port CompactionStats code
 
-            installCompactionResults(compactionState);
+            InstallCompactionResults(compactionState);
         }
 
         private void OpenCompactionOutputFile(CompactionState compactionState)
         {
             Preconditions.CheckNotNull(compactionState, $"{nameof(compactionState)} is null");
-            Preconditions.CheckArgument(compactionState.builder == null,
+            Preconditions.CheckArgument(compactionState.Builder == null,
                 $"{nameof(compactionState)} builder is not null");
 
-            mutex.Lock();
+            _mutex.Lock();
             try
             {
-                long fileNumber = versions.NextFileNumber;
-                pendingOutputs.Add(fileNumber);
-                compactionState.currentFileNumber = fileNumber;
-                compactionState.currentFileSize = 0;
-                compactionState.currentSmallest = null;
-                compactionState.currentLargest = null;
+                var fileNumber = _versions.NextFileNumber;
+                _pendingOutputs.Add(fileNumber);
+                compactionState.CurrentFileNumber = fileNumber;
+                compactionState.CurrentFileSize = 0;
+                compactionState.CurrentSmallest = null;
+                compactionState.CurrentLargest = null;
 
-                FileInfo file = new FileInfo(Path.Combine(databaseDir.FullName, Filename.TableFileName(fileNumber)));
-                compactionState.outfile = file.Open(FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
-                compactionState.builder = new TableBuilder(options, compactionState.outfile,
-                    new InternalUserComparator(internalKeyComparator));
+                var file = new FileInfo(Path.Combine(_databaseDir.FullName, Filename.TableFileName(fileNumber)));
+                compactionState.Outfile = file.Open(FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
+                compactionState.Builder = new TableBuilder(_options, compactionState.Outfile,
+                    new InternalUserComparator(_internalKeyComparator));
             }
             finally
             {
-                mutex.Unlock();
+                _mutex.Unlock();
             }
         }
 
         private void FinishCompactionOutputFile(CompactionState compactionState)
         {
             Preconditions.CheckNotNull(compactionState, $"{nameof(compactionState)} is null");
-            Preconditions.CheckArgument(compactionState.outfile != null);
-            Preconditions.CheckArgument(compactionState.builder != null);
+            Preconditions.CheckArgument(compactionState.Outfile != null);
+            Preconditions.CheckArgument(compactionState.Builder != null);
 
-            long outputNumber = compactionState.currentFileNumber;
+            var outputNumber = compactionState.CurrentFileNumber;
             Preconditions.CheckArgument(outputNumber != 0);
 
-            long currentEntries = compactionState.builder.GetEntryCount();
-            compactionState.builder.Finish();
+            var currentEntries = compactionState.Builder.GetEntryCount();
+            compactionState.Builder.Finish();
 
-            long currentBytes = compactionState.builder.GetFileSize();
-            compactionState.currentFileSize = currentBytes;
-            compactionState.totalBytes += currentBytes;
+            var currentBytes = compactionState.Builder.GetFileSize();
+            compactionState.CurrentFileSize = currentBytes;
+            compactionState.TotalBytes += currentBytes;
 
-            FileMetaData currentFileMetaData = new FileMetaData(compactionState.currentFileNumber,
-                compactionState.currentFileSize,
-                compactionState.currentSmallest,
-                compactionState.currentLargest);
-            compactionState.outputs.Add(currentFileMetaData);
+            var currentFileMetaData = new FileMetaData(compactionState.CurrentFileNumber,
+                compactionState.CurrentFileSize,
+                compactionState.CurrentSmallest,
+                compactionState.CurrentLargest);
+            compactionState.Outputs.Add(currentFileMetaData);
 
-            compactionState.builder = null;
+            compactionState.Builder = null;
 
             //compactionState.outfile.Force(true);
-            compactionState.outfile.Dispose();
-            compactionState.outfile = null;
+            compactionState.Outfile.Dispose();
+            compactionState.Outfile = null;
 
             if (currentEntries > 0)
             {
                 // Verify that the table is usable
-                tableCache.NewIterator(outputNumber);
+                _tableCache.NewIterator(outputNumber);
             }
         }
 
-        private void installCompactionResults(CompactionState compact)
+        private void InstallCompactionResults(CompactionState compact)
         {
-            Preconditions.CheckState(mutex.IsHeldByCurrentThread());
+            Preconditions.CheckState(_mutex.IsHeldByCurrentThread());
 
             // Add compaction outputs
             compact.Compaction.AddInputDeletions(compact.Compaction.Edit);
-            int level = compact.Compaction.Level;
-            foreach (FileMetaData output in compact.outputs)
+            var level = compact.Compaction.Level;
+            foreach (var output in compact.Outputs)
             {
                 compact.Compaction.Edit.AddFile(level + 1, output);
-                pendingOutputs.Remove(output.Number);
+                _pendingOutputs.Remove(output.Number);
             }
 
             try
             {
-                versions.LogAndApply(compact.Compaction.Edit);
+                _versions.LogAndApply(compact.Compaction.Edit);
                 DeleteObsoleteFiles();
             }
             catch (IOException e)
@@ -1270,28 +1268,28 @@ namespace LevelDB.Impl
                 // Compaction failed for some reason.  Simply discard the work and try again later.
 
                 // Discard any files we may have created during this failed compaction
-                foreach (FileMetaData output in compact.outputs)
+                foreach (var output in compact.Outputs)
                 {
-                    FileInfo file = new FileInfo(
-                        Path.Combine(databaseDir.FullName, Filename.TableFileName(output.Number)));
+                    var file = new FileInfo(
+                        Path.Combine(_databaseDir.FullName, Filename.TableFileName(output.Number)));
                     file.Delete();
                 }
-                compact.outputs.Clear();
+                compact.Outputs.Clear();
             }
         }
 
-        int NumberOfFilesInLevel(int level)
+        public int NumberOfFilesInLevel(int level)
         {
-            return versions.Current.NumberOfFilesInLevel(level);
+            return _versions.Current.NumberOfFilesInLevel(level);
         }
 
         public long[] GetApproximateSizes(params Range[] ranges)
         {
             Preconditions.CheckNotNull(ranges, $"{nameof(ranges)} is null");
-            long[] sizes = new long[ranges.Length];
-            for (int i = 0; i < ranges.Length; i++)
+            var sizes = new long[ranges.Length];
+            for (var i = 0; i < ranges.Length; i++)
             {
-                Range range = ranges[i];
+                var range = ranges[i];
                 sizes[i] = GetApproximateSizes(range);
             }
             return sizes;
@@ -1299,38 +1297,38 @@ namespace LevelDB.Impl
 
         public long GetApproximateSizes(Range range)
         {
-            Version v = versions.Current;
+            var v = _versions.Current;
 
-            InternalKey startKey = new InternalKey(WrappedBuffer(range.Start()), MaxSequenceNumber, Value);
-            InternalKey limitKey = new InternalKey(WrappedBuffer(range.Limit()), MaxSequenceNumber, Value);
-            long startOffset = v.GetApproximateOffsetOf(startKey);
-            long limitOffset = v.GetApproximateOffsetOf(limitKey);
+            var startKey = new InternalKey(WrappedBuffer(range.Start()), MaxSequenceNumber, Value);
+            var limitKey = new InternalKey(WrappedBuffer(range.Limit()), MaxSequenceNumber, Value);
+            var startOffset = v.GetApproximateOffsetOf(startKey);
+            var limitOffset = v.GetApproximateOffsetOf(limitKey);
 
             return (limitOffset >= startOffset ? limitOffset - startOffset : 0);
         }
 
         public long GetMaxNextLevelOverlappingBytes()
         {
-            return versions.GetMaxNextLevelOverlappingBytes();
+            return _versions.GetMaxNextLevelOverlappingBytes();
         }
 
         private WriteBatchImpl ReadWriteBatch(SliceInput record, int updateSize)
         {
-            WriteBatchImpl writeBatch = new WriteBatchImpl();
-            int entries = 0;
+            var writeBatch = new WriteBatchImpl();
+            var entries = 0;
             while (record.CanRead)
             {
                 entries++;
-                ValueType valueType = GetValueTypeByPersistentId(record.ReadByteAlt());
+                var valueType = GetValueTypeByPersistentId(record.ReadByteAlt());
                 if (valueType == Value)
                 {
-                    Slice key = ReadLengthPrefixedBytes(record);
-                    Slice value = ReadLengthPrefixedBytes(record);
+                    var key = ReadLengthPrefixedBytes(record);
+                    var value = ReadLengthPrefixedBytes(record);
                     writeBatch.Put(key, value);
                 }
                 else if (valueType == Deletion)
                 {
-                    Slice key = ReadLengthPrefixedBytes(record);
+                    var key = ReadLengthPrefixedBytes(record);
                     writeBatch.Delete(key);
                 }
                 else
@@ -1367,8 +1365,8 @@ namespace LevelDB.Impl
             return record.Sliced(0, sliceOutput.Size());
         }
 
-        private readonly object suspensionMutex = new object();
-        private int suspensionCounter;
+        private readonly object _suspensionMutex = new object();
+        private int _suspensionCounter;
 
         public void SuspendCompactions()
         {
@@ -1378,13 +1376,13 @@ namespace LevelDB.Impl
             {
                 try
                 {
-                    lock (suspensionMutex)
+                    lock (_suspensionMutex)
                     {
-                        suspensionCounter++;
-                        Monitor.PulseAll(suspensionMutex);
-                        while (suspensionCounter > 0 && !token.IsCancellationRequested)
+                        _suspensionCounter++;
+                        Monitor.PulseAll(_suspensionMutex);
+                        while (_suspensionCounter > 0 && !token.IsCancellationRequested)
                         {
-                            Monitor.Wait(suspensionMutex, 500);
+                            Monitor.Wait(_suspensionMutex, 500);
                         }
                     }
                 }
@@ -1394,21 +1392,21 @@ namespace LevelDB.Impl
                 }
             }, token);
 
-            lock (suspensionMutex)
+            lock (_suspensionMutex)
             {
-                while (suspensionCounter < 1)
+                while (_suspensionCounter < 1)
                 {
-                    Monitor.Wait(suspensionMutex);
+                    Monitor.Wait(_suspensionMutex);
                 }
             }
         }
 
         public void ResumeCompactions()
         {
-            lock (suspensionMutex)
+            lock (_suspensionMutex)
             {
-                suspensionCounter--;
-                Monitor.PulseAll(suspensionMutex);
+                _suspensionCounter--;
+                Monitor.PulseAll(_suspensionMutex);
             }
         }
 
@@ -1447,23 +1445,23 @@ namespace LevelDB.Impl
         {
             public Compaction Compaction { get; }
 
-            internal readonly IList<FileMetaData> outputs = new List<FileMetaData>();
+            internal readonly IList<FileMetaData> Outputs = new List<FileMetaData>();
 
-            internal long smallestSnapshot;
+            internal long SmallestSnapshot;
 
             // State kept for output being generated
-            internal FileStream outfile;
+            internal FileStream Outfile;
 
-            internal TableBuilder builder;
+            internal TableBuilder Builder;
 
             // Current file being generated
-            internal long currentFileNumber;
+            internal long CurrentFileNumber;
 
-            internal long currentFileSize;
-            internal InternalKey currentSmallest;
-            internal InternalKey currentLargest;
+            internal long CurrentFileSize;
+            internal InternalKey CurrentSmallest;
+            internal InternalKey CurrentLargest;
 
-            internal long totalBytes;
+            internal long TotalBytes;
 
             internal CompactionState(Compaction compaction)
             {

@@ -16,27 +16,20 @@
 
 #endregion
 
-using System.IO;
+using System.Text;
 
-namespace LevelDB.Util.Extension
+namespace LevelDB.Util
 {
-    public static class MemoryStreamExtensions
+    public static class Utils
     {
-        public static void Clear(this Stream stream)
+        public static byte[] ToByteArray(string value)
         {
-            stream.Position = 0;
+            return Encoding.UTF8.GetBytes(value);
         }
-
-        public static MemoryStream Duplicate(this Stream ms)
+        
+        public static string ToString(byte[] value)
         {
-            var pos = ms.Position;
-            var ms2 = new MemoryStream();
-            ms.Position = 0;
-            ms.CopyTo(ms2);
-            ms.Position = pos;
-            ms2.Position = pos;
-            ms2.SetLength(ms.Length);
-            return ms2;
+            return Encoding.UTF8.GetString(value);
         }
     }
 }

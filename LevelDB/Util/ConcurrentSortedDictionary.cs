@@ -31,7 +31,7 @@ namespace LevelDB.Util
         #region Variables
 
         private readonly ReaderWriterLockSlim _readWriteLock = new ReaderWriterLockSlim();
-        readonly SortedDictionary<TKey, TValue> _dict;
+        private readonly SortedDictionary<TKey, TValue> _dict;
 
         #endregion
 
